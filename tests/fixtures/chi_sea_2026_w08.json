@@ -31,7 +31,9 @@
 "play_type": null,
 "play_type_nfl": "GAME_START",
 "penalty": null,
-"desc": "GAME"
+"desc": "GAME",
+"spread_line": 3.0,
+"vegas_wp": 0.5959430932998657
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -65,7 +67,9 @@
 "play_type": "field_goal",
 "play_type_nfl": "FIELD_GOAL",
 "penalty": 0.0,
-"desc": "(12:53) 5-J.Myers 27 yard field goal is GOOD, Center-41-C.Stoll, Holder-4-M.Dickson."
+"desc": "(12:53) 5-J.Myers 27 yard field goal is GOOD, Center-41-C.Stoll, Holder-4-M.Dickson.",
+"spread_line": 3.0,
+"vegas_wp": 0.3930896818637848
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -99,7 +103,9 @@
 "play_type": "kickoff",
 "play_type_nfl": "KICK_OFF",
 "penalty": 0.0,
-"desc": "5-J.Myers kicks 59 yards from SEA 35 to CHI 6. 13-Z.Thomas to CHI 21 for 15 yards (48-T.Knight)."
+"desc": "5-J.Myers kicks 59 yards from SEA 35 to CHI 6. 13-Z.Thomas to CHI 21 for 15 yards (48-T.Knight).",
+"spread_line": 3.0,
+"vegas_wp": 0.6143432855606079
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -133,7 +139,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(12:43) 4-D.Swift left end pushed ob at CHI 21 for no gain (20-J.Love)."
+"desc": "(12:43) 4-D.Swift left end pushed ob at CHI 21 for no gain (20-J.Love).",
+"spread_line": 3.0,
+"vegas_wp": 0.6107775568962097
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -167,7 +175,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(12:08) (Shotgun) 18-C.Williams pass incomplete deep left to 10-L.Burden."
+"desc": "(12:08) (Shotgun) 18-C.Williams pass incomplete deep left to 10-L.Burden.",
+"spread_line": 3.0,
+"vegas_wp": 0.5982889533042908
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -201,7 +211,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(14:13) (Shotgun) 14-S.Darnold pass incomplete short middle to 15-T.Horton (21-C.Lewis)."
+"desc": "(14:13) (Shotgun) 14-S.Darnold pass incomplete short middle to 15-T.Horton (21-C.Lewis).",
+"spread_line": 3.0,
+"vegas_wp": 0.5892459750175476
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -235,7 +247,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(12:02) (Shotgun) 18-C.Williams pass short right to 84-C.Loveland to CHI 25 for 4 yards (21-D.Witherspoon; 32-D.Thomas)."
+"desc": "(12:02) (Shotgun) 18-C.Williams pass short right to 84-C.Loveland to CHI 25 for 4 yards (21-D.Witherspoon; 32-D.Thomas).",
+"spread_line": 3.0,
+"vegas_wp": 0.5806350708007812
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -269,7 +283,9 @@
 "play_type": "punt",
 "play_type_nfl": "PUNT",
 "penalty": 0.0,
-"desc": "(11:22) 19-T.Taylor punts 45 yards to SEA 30, Center-46-S.Daly, downed by CHI-9-J.Walker."
+"desc": "(11:22) 19-T.Taylor punts 45 yards to SEA 30, Center-46-S.Daly, downed by CHI-9-J.Walker.",
+"spread_line": 3.0,
+"vegas_wp": 0.5518766641616821
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -303,7 +319,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(11:09) (Shotgun) 8-J.Price right guard to SEA 30 for no gain (1-J.Johnson; 94-A.Booker)."
+"desc": "(11:09) (Shotgun) 8-J.Price right guard to SEA 30 for no gain (1-J.Johnson; 94-A.Booker).",
+"spread_line": 3.0,
+"vegas_wp": 0.4380335509777069
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -337,7 +355,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(10:27) (Shotgun) 8-J.Price right end to SEA 32 for 2 yards (99-J.Simmons; 98-M.Sweat)."
+"desc": "(10:27) (Shotgun) 8-J.Price right end to SEA 32 for 2 yards (99-J.Simmons; 98-M.Sweat).",
+"spread_line": 3.0,
+"vegas_wp": 0.41320931911468506
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -371,7 +391,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(9:48) (Shotgun) 14-S.Darnold pass incomplete short right to 36-G.Holani [98-M.Sweat]."
+"desc": "(9:48) (Shotgun) 14-S.Darnold pass incomplete short right to 36-G.Holani [98-M.Sweat].",
+"spread_line": 3.0,
+"vegas_wp": 0.4094424545764923
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -405,7 +427,9 @@
 "play_type": "punt",
 "play_type_nfl": "PUNT",
 "penalty": 0.0,
-"desc": "(9:41) 4-M.Dickson punts 40 yards to CHI 28, Center-41-C.Stoll, fair catch by 14-K.Raymond."
+"desc": "(9:41) 4-M.Dickson punts 40 yards to CHI 28, Center-41-C.Stoll, fair catch by 14-K.Raymond.",
+"spread_line": 3.0,
+"vegas_wp": 0.3722207546234131
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -439,7 +463,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(9:34) (Shotgun) 18-C.Williams pass deep middle to 10-L.Burden to SEA 49 for 23 yards (20-J.Love)."
+"desc": "(9:34) (Shotgun) 18-C.Williams pass deep middle to 10-L.Burden to SEA 49 for 23 yards (20-J.Love).",
+"spread_line": 3.0,
+"vegas_wp": 0.6183305978775024
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -473,7 +499,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(8:53) 18-C.Williams pass short right to 10-L.Burden pushed ob at SEA 42 for 7 yards (3-N.Emmanwori)."
+"desc": "(8:53) 18-C.Williams pass short right to 10-L.Burden pushed ob at SEA 42 for 7 yards (3-N.Emmanwori).",
+"spread_line": 3.0,
+"vegas_wp": 0.6507388353347778
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -507,7 +535,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(8:19) (Shotgun) 18-C.Williams pass short left to 23-R.Johnson pushed ob at SEA 31 for 11 yards (13-E.Jones; 32-D.Thomas)."
+"desc": "(8:19) (Shotgun) 18-C.Williams pass short left to 23-R.Johnson pushed ob at SEA 31 for 11 yards (13-E.Jones; 32-D.Thomas).",
+"spread_line": 3.0,
+"vegas_wp": 0.659506618976593
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -541,7 +571,9 @@
 "play_type": "punt",
 "play_type_nfl": "PUNT",
 "penalty": 0.0,
-"desc": "(14:08) 4-M.Dickson punts 63 yards to end zone, Center-41-C.Stoll, Touchback."
+"desc": "(14:08) 4-M.Dickson punts 63 yards to end zone, Center-41-C.Stoll, Touchback.",
+"spread_line": 3.0,
+"vegas_wp": 0.5395321249961853
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -575,7 +607,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(7:32) 18-C.Williams scrambles left end ran ob at SEA 29 for 2 yards (58-D.Hall)."
+"desc": "(7:32) 18-C.Williams scrambles left end ran ob at SEA 29 for 2 yards (58-D.Hall).",
+"spread_line": 3.0,
+"vegas_wp": 0.7030224800109863
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -609,7 +643,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(7:05) (Shotgun) 18-C.Williams pass incomplete short left to 4-D.Swift."
+"desc": "(7:05) (Shotgun) 18-C.Williams pass incomplete short left to 4-D.Swift.",
+"spread_line": 3.0,
+"vegas_wp": 0.6929688453674316
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -643,7 +679,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(7:02) (Shotgun) 18-C.Williams pass short left to 13-Z.Thomas to SEA 25 for 4 yards (29-J.Jobe)."
+"desc": "(7:02) (Shotgun) 18-C.Williams pass short left to 13-Z.Thomas to SEA 25 for 4 yards (29-J.Jobe).",
+"spread_line": 3.0,
+"vegas_wp": 0.6801304817199707
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -677,7 +715,9 @@
 "play_type": "field_goal",
 "play_type_nfl": "FIELD_GOAL",
 "penalty": 0.0,
-"desc": "(6:11) 8-C.Santos 44 yard field goal is GOOD, Center-46-S.Daly, Holder-19-T.Taylor."
+"desc": "(6:11) 8-C.Santos 44 yard field goal is GOOD, Center-46-S.Daly, Holder-19-T.Taylor.",
+"spread_line": 3.0,
+"vegas_wp": 0.6749340295791626
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -711,7 +751,9 @@
 "play_type": "kickoff",
 "play_type_nfl": "KICK_OFF",
 "penalty": 0.0,
-"desc": "8-C.Santos kicks 64 yards from CHI 35 to SEA 1. 36-G.Holani to SEA 21 for 20 yards (92-D.Hardy; 38-S.Thomas)."
+"desc": "8-C.Santos kicks 64 yards from CHI 35 to SEA 1. 36-G.Holani to SEA 21 for 20 yards (92-D.Hardy; 38-S.Thomas).",
+"spread_line": 3.0,
+"vegas_wp": 0.34635382890701294
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -745,7 +787,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(6:02) 14-S.Darnold pass short left to 8-J.Price to SEA 23 for 2 yards (53-T.Edwards)."
+"desc": "(6:02) 14-S.Darnold pass short left to 8-J.Price to SEA 23 for 2 yards (53-T.Edwards).",
+"spread_line": 3.0,
+"vegas_wp": 0.3386630415916443
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -779,7 +823,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(5:23) (Shotgun) 8-J.Price up the middle to SEA 26 for 3 yards (50-G.Jarrett)."
+"desc": "(5:23) (Shotgun) 8-J.Price up the middle to SEA 26 for 3 yards (50-G.Jarrett).",
+"spread_line": 3.0,
+"vegas_wp": 0.3275492489337921
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -813,7 +859,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(13:57) 4-D.Swift right tackle to CHI 23 for 3 yards (91-B.Murphy; 32-D.Thomas)."
+"desc": "(13:57) 4-D.Swift right tackle to CHI 23 for 3 yards (91-B.Murphy; 32-D.Thomas).",
+"spread_line": 3.0,
+"vegas_wp": 0.473064661026001
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -847,7 +895,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(5:01) (No Huddle, Shotgun) 14-S.Darnold pass incomplete short left to 88-A.Barner."
+"desc": "(5:01) (No Huddle, Shotgun) 14-S.Darnold pass incomplete short left to 88-A.Barner.",
+"spread_line": 3.0,
+"vegas_wp": 0.3226862847805023
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -881,7 +931,9 @@
 "play_type": "punt",
 "play_type_nfl": "PUNT",
 "penalty": 0.0,
-"desc": "(4:57) 4-M.Dickson punts 49 yards to CHI 25, Center-41-C.Stoll. 14-K.Raymond to CHI 25 for no gain (28-N.Pritchett)."
+"desc": "(4:57) 4-M.Dickson punts 49 yards to CHI 25, Center-41-C.Stoll. 14-K.Raymond to CHI 25 for no gain (28-N.Pritchett).",
+"spread_line": 3.0,
+"vegas_wp": 0.2868305444717407
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -915,7 +967,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(4:48) (Shotgun) 4-D.Swift left guard to CHI 30 for 5 yards (32-D.Thomas; 20-J.Love)."
+"desc": "(4:48) (Shotgun) 4-D.Swift left guard to CHI 30 for 5 yards (32-D.Thomas; 20-J.Love).",
+"spread_line": 3.0,
+"vegas_wp": 0.7383619546890259
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -949,7 +1003,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(4:12) 18-C.Williams pass deep middle to 15-R.Odunze to CHI 48 for 18 yards (20-J.Love)."
+"desc": "(4:12) 18-C.Williams pass deep middle to 15-R.Odunze to CHI 48 for 18 yards (20-J.Love).",
+"spread_line": 3.0,
+"vegas_wp": 0.7372387051582336
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -983,7 +1039,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(3:43) (No Huddle, Shotgun) 4-D.Swift right tackle to CHI 48 for no gain (32-D.Thomas)."
+"desc": "(3:43) (No Huddle, Shotgun) 4-D.Swift right tackle to CHI 48 for no gain (32-D.Thomas).",
+"spread_line": 3.0,
+"vegas_wp": 0.7679184675216675
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1017,7 +1075,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(3:09) (Shotgun) Direct snap to 4-D.Swift. 18-C.Williams pass deep left to 15-R.Odunze to SEA 28 for 24 yards (21-D.Witherspoon)."
+"desc": "(3:09) (Shotgun) Direct snap to 4-D.Swift. 18-C.Williams pass deep left to 15-R.Odunze to SEA 28 for 24 yards (21-D.Witherspoon).",
+"spread_line": 3.0,
+"vegas_wp": 0.7566812038421631
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1051,7 +1111,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(2:26) 4-D.Swift up the middle to SEA 25 for 3 yards (3-N.Emmanwori; 13-E.Jones)."
+"desc": "(2:26) 4-D.Swift up the middle to SEA 25 for 3 yards (3-N.Emmanwori; 13-E.Jones).",
+"spread_line": 3.0,
+"vegas_wp": 0.8169020414352417
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1085,7 +1147,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(2:00) 18-C.Williams pass short left to 4-D.Swift to SEA 23 for 2 yards (21-D.Witherspoon)."
+"desc": "(2:00) 18-C.Williams pass short left to 4-D.Swift to SEA 23 for 2 yards (21-D.Witherspoon).",
+"spread_line": 3.0,
+"vegas_wp": 0.8215267658233643
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1119,7 +1183,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(13:22) (Shotgun) 18-C.Williams pass short middle to 84-C.Loveland to CHI 23 for no gain (91-B.Murphy)."
+"desc": "(13:22) (Shotgun) 18-C.Williams pass short middle to 84-C.Loveland to CHI 23 for no gain (91-B.Murphy).",
+"spread_line": 3.0,
+"vegas_wp": 0.47517669200897217
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1153,7 +1219,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(1:20) (Shotgun) 4-D.Swift left end to SEA 20 for 3 yards (20-J.Love)."
+"desc": "(1:20) (Shotgun) 4-D.Swift left end to SEA 20 for 3 yards (20-J.Love).",
+"spread_line": 3.0,
+"vegas_wp": 0.8146836757659912
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1187,7 +1255,9 @@
 "play_type": "no_play",
 "play_type_nfl": "TIMEOUT",
 "penalty": 0.0,
-"desc": "Timeout #1 by SEA at 01:12."
+"desc": "Timeout #1 by SEA at 01:12.",
+"spread_line": 3.0,
+"vegas_wp": 0.8044959306716919
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1221,7 +1291,9 @@
 "play_type": "field_goal",
 "play_type_nfl": "FIELD_GOAL",
 "penalty": 0.0,
-"desc": "(1:12) 8-C.Santos 38 yard field goal is GOOD, Center-46-S.Daly, Holder-19-T.Taylor."
+"desc": "(1:12) 8-C.Santos 38 yard field goal is GOOD, Center-46-S.Daly, Holder-19-T.Taylor.",
+"spread_line": 3.0,
+"vegas_wp": 0.8044959306716919
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1255,7 +1327,9 @@
 "play_type": "no_play",
 "play_type_nfl": "TIMEOUT",
 "penalty": 0.0,
-"desc": "Timeout #1 by CHI at 01:12."
+"desc": "Timeout #1 by CHI at 01:12.",
+"spread_line": 3.0,
+"vegas_wp": 0.8044959306716919
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1289,7 +1363,9 @@
 "play_type": "kickoff",
 "play_type_nfl": "KICK_OFF",
 "penalty": 0.0,
-"desc": "8-C.Santos kicks 62 yards from CHI 35 to SEA 3. 36-G.Holani to SEA 29 for 26 yards (44-N.Sewell)."
+"desc": "8-C.Santos kicks 62 yards from CHI 35 to SEA 3. 36-G.Holani to SEA 29 for 26 yards (44-N.Sewell).",
+"spread_line": 3.0,
+"vegas_wp": 0.2272435426712036
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1323,7 +1399,9 @@
 "play_type": "no_play",
 "play_type_nfl": "PENALTY",
 "penalty": 1.0,
-"desc": "(1:03) (Shotgun) 14-S.Darnold pass incomplete short right to 10-C.Kupp (1-J.Johnson). PENALTY on CHI-1-J.Johnson, Defensive Pass Interference, 16 yards, enforced at SEA 29 - No Play."
+"desc": "(1:03) (Shotgun) 14-S.Darnold pass incomplete short right to 10-C.Kupp (1-J.Johnson). PENALTY on CHI-1-J.Johnson, Defensive Pass Interference, 16 yards, enforced at SEA 29 - No Play.",
+"spread_line": 3.0,
+"vegas_wp": 0.23341213166713715
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1357,7 +1435,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(:57) (Shotgun) 14-S.Darnold pass incomplete short left to 15-T.Horton."
+"desc": "(:57) (Shotgun) 14-S.Darnold pass incomplete short left to 15-T.Horton.",
+"spread_line": 3.0,
+"vegas_wp": 0.26278752088546753
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1391,7 +1471,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(:53) (Shotgun) 14-S.Darnold pass short right to 11-J.Smith-Njigba ran ob at CHI 43 for 12 yards."
+"desc": "(:53) (Shotgun) 14-S.Darnold pass short right to 11-J.Smith-Njigba ran ob at CHI 43 for 12 yards.",
+"spread_line": 3.0,
+"vegas_wp": 0.2477589249610901
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1425,7 +1507,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(:48) (Shotgun) 14-S.Darnold pass incomplete short left to 15-T.Horton (29-T.Stevenson)."
+"desc": "(:48) (Shotgun) 14-S.Darnold pass incomplete short left to 15-T.Horton (29-T.Stevenson).",
+"spread_line": 3.0,
+"vegas_wp": 0.2792229652404785
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1459,7 +1543,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(:44) (Shotgun) 14-S.Darnold pass incomplete deep left to 11-J.Smith-Njigba."
+"desc": "(:44) (Shotgun) 14-S.Darnold pass incomplete deep left to 11-J.Smith-Njigba.",
+"spread_line": 3.0,
+"vegas_wp": 0.2599371373653412
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1493,7 +1579,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(:37) (Shotgun) 14-S.Darnold pass deep left to 11-J.Smith-Njigba for 43 yards, TOUCHDOWN."
+"desc": "(:37) (Shotgun) 14-S.Darnold pass deep left to 11-J.Smith-Njigba for 43 yards, TOUCHDOWN.",
+"spread_line": 3.0,
+"vegas_wp": 0.2394130825996399
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1527,7 +1615,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(12:41) (Shotgun) 18-C.Williams pass short right to 84-C.Loveland to CHI 35 for 12 yards (13-E.Jones)."
+"desc": "(12:41) (Shotgun) 18-C.Williams pass short right to 84-C.Loveland to CHI 35 for 12 yards (13-E.Jones).",
+"spread_line": 3.0,
+"vegas_wp": 0.45011699199676514
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1561,7 +1651,9 @@
 "play_type": "extra_point",
 "play_type_nfl": "XP_KICK",
 "penalty": 0.0,
-"desc": "5-J.Myers extra point is No Good, Wide Left, Center-41-C.Stoll, Holder-4-M.Dickson."
+"desc": "5-J.Myers extra point is No Good, Wide Left, Center-41-C.Stoll, Holder-4-M.Dickson.",
+"spread_line": 3.0,
+"vegas_wp": 0.36511195188133383
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1595,7 +1687,9 @@
 "play_type": "kickoff",
 "play_type_nfl": "KICK_OFF",
 "penalty": 0.0,
-"desc": "5-J.Myers kicks 58 yards from SEA 35 to CHI 7. 13-Z.Thomas to CHI 34 for 27 yards (38-B.Russell; 24-R.Thomas)."
+"desc": "5-J.Myers kicks 58 yards from SEA 35 to CHI 7. 13-Z.Thomas to CHI 34 for 27 yards (38-B.Russell; 24-R.Thomas).",
+"spread_line": 3.0,
+"vegas_wp": 0.6484308242797852
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1629,7 +1723,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(:25) (Shotgun) 18-C.Williams pass short middle to 84-C.Loveland to CHI 48 for 14 yards (13-E.Jones)."
+"desc": "(:25) (Shotgun) 18-C.Williams pass short middle to 84-C.Loveland to CHI 48 for 14 yards (13-E.Jones).",
+"spread_line": 3.0,
+"vegas_wp": 0.6676525473594666
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1663,7 +1759,9 @@
 "play_type": "no_play",
 "play_type_nfl": "PENALTY",
 "penalty": 1.0,
-"desc": "(:18) (Shotgun) PENALTY on CHI-73-J.Jackson, False Start, 5 yards, enforced at CHI 48 - No Play."
+"desc": "(:18) (Shotgun) PENALTY on CHI-73-J.Jackson, False Start, 5 yards, enforced at CHI 48 - No Play.",
+"spread_line": 3.0,
+"vegas_wp": 0.6858220100402832
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1697,7 +1795,9 @@
 "play_type": "no_play",
 "play_type_nfl": "TIMEOUT",
 "penalty": 0.0,
-"desc": "Timeout #2 by CHI at 00:18."
+"desc": "Timeout #2 by CHI at 00:18.",
+"spread_line": 3.0,
+"vegas_wp": 0.6858220100402832
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1731,7 +1831,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(:18) (Shotgun) 18-C.Williams pass incomplete deep middle to 15-R.Odunze (28-N.Pritchett)."
+"desc": "(:18) (Shotgun) 18-C.Williams pass incomplete deep middle to 15-R.Odunze (28-N.Pritchett).",
+"spread_line": 3.0,
+"vegas_wp": 0.6649056673049927
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1765,7 +1867,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(:14) (Shotgun) 18-C.Williams pass incomplete deep left to 15-R.Odunze."
+"desc": "(:14) (Shotgun) 18-C.Williams pass incomplete deep left to 15-R.Odunze.",
+"spread_line": 3.0,
+"vegas_wp": 0.6477118730545044
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1799,7 +1903,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(:07) (Shotgun) 18-C.Williams pass incomplete deep right to 13-Z.Thomas (0-D.Lawrence)."
+"desc": "(:07) (Shotgun) 18-C.Williams pass incomplete deep right to 13-Z.Thomas (0-D.Lawrence).",
+"spread_line": 3.0,
+"vegas_wp": 0.6262599229812622
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1833,7 +1939,9 @@
 "play_type": null,
 "play_type_nfl": "END_QUARTER",
 "penalty": null,
-"desc": "END QUARTER 2"
+"desc": "END QUARTER 2",
+"spread_line": 3.0,
+"vegas_wp": 0.6060760617256165
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1867,7 +1975,9 @@
 "play_type": "kickoff",
 "play_type_nfl": "KICK_OFF",
 "penalty": 1.0,
-"desc": "5-J.Myers kicks 60 yards from SEA 35 to CHI 5. 13-Z.Thomas to CHI 32 for 27 yards (52-P.O'Connell; 94-M.Morris). PENALTY on CHI-48-D.Jackson, Offensive Holding, 10 yards, enforced at CHI 27."
+"desc": "5-J.Myers kicks 60 yards from SEA 35 to CHI 5. 13-Z.Thomas to CHI 32 for 27 yards (52-P.O'Connell; 94-M.Morris). PENALTY on CHI-48-D.Jackson, Offensive Holding, 10 yards, enforced at CHI 27.",
+"spread_line": 3.0,
+"vegas_wp": 0.6060760617256165
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1901,7 +2011,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(14:54) (Shotgun) 18-C.Williams pass short left to 10-L.Burden pushed ob at CHI 20 for 3 yards (29-J.Jobe)."
+"desc": "(14:54) (Shotgun) 18-C.Williams pass short left to 10-L.Burden pushed ob at CHI 20 for 3 yards (29-J.Jobe).",
+"spread_line": 3.0,
+"vegas_wp": 0.5903571844100952
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1935,7 +2047,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(12:16) (No Huddle, Shotgun) 4-D.Swift right guard to CHI 36 for 1 yard (58-D.Hall)."
+"desc": "(12:16) (No Huddle, Shotgun) 4-D.Swift right guard to CHI 36 for 1 yard (58-D.Hall).",
+"spread_line": 3.0,
+"vegas_wp": 0.4851870834827423
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -1969,7 +2083,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(14:22) (Shotgun) 18-C.Williams pass short left to 14-K.Raymond to CHI 25 for 5 yards (29-J.Jobe)."
+"desc": "(14:22) (Shotgun) 18-C.Williams pass short left to 14-K.Raymond to CHI 25 for 5 yards (29-J.Jobe).",
+"spread_line": 3.0,
+"vegas_wp": 0.5820271372795105
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2003,7 +2119,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(13:47) (Shotgun) 18-C.Williams pass incomplete short middle to 10-L.Burden (13-E.Jones)."
+"desc": "(13:47) (Shotgun) 18-C.Williams pass incomplete short middle to 10-L.Burden (13-E.Jones).",
+"spread_line": 3.0,
+"vegas_wp": 0.5935152173042297
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2037,7 +2155,9 @@
 "play_type": "punt",
 "play_type_nfl": "PUNT",
 "penalty": 0.0,
-"desc": "(13:41) 19-T.Taylor punts 57 yards to SEA 18, Center-46-S.Daly. 15-T.Horton to SEA 27 for 9 yards (39-J.Blackwell)."
+"desc": "(13:41) 19-T.Taylor punts 57 yards to SEA 18, Center-46-S.Daly. 15-T.Horton to SEA 27 for 9 yards (39-J.Blackwell).",
+"spread_line": 3.0,
+"vegas_wp": 0.5465162396430969
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2071,7 +2191,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(13:30) 14-S.Darnold pass incomplete short right to 88-A.Barner."
+"desc": "(13:30) 14-S.Darnold pass incomplete short right to 88-A.Barner.",
+"spread_line": 3.0,
+"vegas_wp": 0.45150965452194214
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2105,7 +2227,9 @@
 "play_type": "pass",
 "play_type_nfl": "SACK",
 "penalty": 0.0,
-"desc": "(13:27) (Shotgun) 14-S.Darnold sacked at SEA 19 for -8 yards (98-M.Sweat)."
+"desc": "(13:27) (Shotgun) 14-S.Darnold sacked at SEA 19 for -8 yards (98-M.Sweat).",
+"spread_line": 3.0,
+"vegas_wp": 0.4339381158351898
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2139,7 +2263,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(12:45) (Shotgun) 36-G.Holani up the middle to SEA 28 for 9 yards (31-D.Thieneman)."
+"desc": "(12:45) (Shotgun) 36-G.Holani up the middle to SEA 28 for 9 yards (31-D.Thieneman).",
+"spread_line": 3.0,
+"vegas_wp": 0.3539399206638336
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2173,7 +2299,9 @@
 "play_type": "punt",
 "play_type_nfl": "PUNT",
 "penalty": 0.0,
-"desc": "(12:08) 4-M.Dickson punts 48 yards to CHI 24, Center-41-C.Stoll. 14-K.Raymond to CHI 31 for 7 yards (85-I.Charles; 24-R.Thomas)."
+"desc": "(12:08) 4-M.Dickson punts 48 yards to CHI 24, Center-41-C.Stoll. 14-K.Raymond to CHI 31 for 7 yards (85-I.Charles; 24-R.Thomas).",
+"spread_line": 3.0,
+"vegas_wp": 0.3597344756126404
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2207,7 +2335,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(11:57) 18-C.Williams pass deep middle to 15-R.Odunze to SEA 46 for 23 yards (29-J.Jobe)."
+"desc": "(11:57) 18-C.Williams pass deep middle to 15-R.Odunze to SEA 46 for 23 yards (29-J.Jobe).",
+"spread_line": 3.0,
+"vegas_wp": 0.6398678421974182
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2241,7 +2371,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(11:14) 4-D.Swift up the middle to SEA 47 for -1 yards (21-D.Witherspoon)."
+"desc": "(11:14) 4-D.Swift up the middle to SEA 47 for -1 yards (21-D.Witherspoon).",
+"spread_line": 3.0,
+"vegas_wp": 0.6717478036880493
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2275,7 +2407,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(11:48) 18-C.Williams pass short right to 4-D.Swift to CHI 44 for 8 yards (90-J.Reed)."
+"desc": "(11:48) 18-C.Williams pass short right to 4-D.Swift to CHI 44 for 8 yards (90-J.Reed).",
+"spread_line": 3.0,
+"vegas_wp": 0.48729410767555237
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2309,7 +2443,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(10:38) 18-C.Williams pass short middle to 15-R.Odunze to SEA 25 for 22 yards (28-N.Pritchett) [3-N.Emmanwori]."
+"desc": "(10:38) 18-C.Williams pass short middle to 15-R.Odunze to SEA 25 for 22 yards (28-N.Pritchett) [3-N.Emmanwori].",
+"spread_line": 3.0,
+"vegas_wp": 0.654449999332428
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2343,7 +2479,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(9:47) 4-D.Swift right tackle to SEA 20 for 5 yards (21-D.Witherspoon; 13-E.Jones)."
+"desc": "(9:47) 4-D.Swift right tackle to SEA 20 for 5 yards (21-D.Witherspoon; 13-E.Jones).",
+"spread_line": 3.0,
+"vegas_wp": 0.7305818200111389
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2377,7 +2515,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(9:01) 4-D.Swift left end to SEA 16 for 4 yards (21-D.Witherspoon)."
+"desc": "(9:01) 4-D.Swift left end to SEA 16 for 4 yards (21-D.Witherspoon).",
+"spread_line": 3.0,
+"vegas_wp": 0.7467672824859619
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2411,7 +2551,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(8:18) 4-D.Swift right end to SEA 12 for 4 yards (21-D.Witherspoon; 13-E.Jones)."
+"desc": "(8:18) 4-D.Swift right end to SEA 12 for 4 yards (21-D.Witherspoon; 13-E.Jones).",
+"spread_line": 3.0,
+"vegas_wp": 0.7297500967979431
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2445,7 +2587,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(7:37) 23-R.Johnson right tackle to SEA 12 for no gain (99-L.Williams). SEA-99-L.Williams was injured during the play."
+"desc": "(7:37) 23-R.Johnson right tackle to SEA 12 for no gain (99-L.Williams). SEA-99-L.Williams was injured during the play.",
+"spread_line": 3.0,
+"vegas_wp": 0.7548368573188782
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2479,7 +2623,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(7:00) (Shotgun) 18-C.Williams pass short middle to 14-K.Raymond to SEA 3 for 9 yards (20-J.Love)."
+"desc": "(7:00) (Shotgun) 18-C.Williams pass short middle to 14-K.Raymond to SEA 3 for 9 yards (20-J.Love).",
+"spread_line": 3.0,
+"vegas_wp": 0.7407383322715759
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2513,7 +2659,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(6:26) (No Huddle, Shotgun) 23-R.Johnson right guard to SEA 1 for 2 yards (3-N.Emmanwori; 32-D.Thomas)."
+"desc": "(6:26) (No Huddle, Shotgun) 23-R.Johnson right guard to SEA 1 for 2 yards (3-N.Emmanwori; 32-D.Thomas).",
+"spread_line": 3.0,
+"vegas_wp": 0.7550017833709717
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2547,7 +2695,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(5:41) (Shotgun) 4-D.Swift left guard for 1 yard, TOUCHDOWN."
+"desc": "(5:41) (Shotgun) 4-D.Swift left guard for 1 yard, TOUCHDOWN.",
+"spread_line": 3.0,
+"vegas_wp": 0.7993879914283752
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2581,7 +2731,9 @@
 "play_type": "extra_point",
 "play_type_nfl": "XP_KICK",
 "penalty": 0.0,
-"desc": "8-C.Santos extra point is GOOD, Center-46-S.Daly, Holder-19-T.Taylor."
+"desc": "8-C.Santos extra point is GOOD, Center-46-S.Daly, Holder-19-T.Taylor.",
+"spread_line": 3.0,
+"vegas_wp": 0.7940502699635084
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2615,7 +2767,9 @@
 "play_type": "kickoff",
 "play_type_nfl": "KICK_OFF",
 "penalty": 0.0,
-"desc": "8-C.Santos kicks 58 yards from CHI 35 to SEA 7. 36-G.Holani to SEA 41 for 34 yards (92-D.Hardy)."
+"desc": "8-C.Santos kicks 58 yards from CHI 35 to SEA 7. 36-G.Holani to SEA 41 for 34 yards (92-D.Hardy).",
+"spread_line": 3.0,
+"vegas_wp": 0.20412889122962952
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2649,7 +2803,9 @@
 "play_type": "pass",
 "play_type_nfl": "SACK",
 "penalty": 0.0,
-"desc": "(5:32) 14-S.Darnold sacked at SEA 38 for -3 yards (12-D.Bush)."
+"desc": "(5:32) 14-S.Darnold sacked at SEA 38 for -3 yards (12-D.Bush).",
+"spread_line": 3.0,
+"vegas_wp": 0.23671960830688477
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2683,7 +2839,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(11:02) 65-L.Newman reported in as eligible. 18-C.Williams pass incomplete deep right to 84-C.Loveland [99-L.Williams]."
+"desc": "(11:02) 65-L.Newman reported in as eligible. 18-C.Williams pass incomplete deep right to 84-C.Loveland [99-L.Williams].",
+"spread_line": 3.0,
+"vegas_wp": 0.4851321280002594
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2717,7 +2875,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(4:51) 26-Z.Charbonnet up the middle to CHI 49 for 13 yards (31-D.Thieneman)."
+"desc": "(4:51) 26-Z.Charbonnet up the middle to CHI 49 for 13 yards (31-D.Thieneman).",
+"spread_line": 3.0,
+"vegas_wp": 0.1841430515050888
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2751,7 +2911,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(4:11) 14-S.Darnold pass short left to 88-A.Barner pushed ob at CHI 32 for 17 yards (29-T.Stevenson)."
+"desc": "(4:11) 14-S.Darnold pass short left to 88-A.Barner pushed ob at CHI 32 for 17 yards (29-T.Stevenson).",
+"spread_line": 3.0,
+"vegas_wp": 0.22664138674736023
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2785,7 +2947,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(3:34) 8-J.Price right end to CHI 33 for -1 yards (1-J.Johnson)."
+"desc": "(3:34) 8-J.Price right end to CHI 33 for -1 yards (1-J.Johnson).",
+"spread_line": 3.0,
+"vegas_wp": 0.2602280080318451
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2819,7 +2983,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(2:47) (Shotgun) 8-J.Price left end to CHI 32 for 1 yard (94-A.Booker)."
+"desc": "(2:47) (Shotgun) 8-J.Price left end to CHI 32 for 1 yard (94-A.Booker).",
+"spread_line": 3.0,
+"vegas_wp": 0.23135881125926971
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2853,7 +3019,9 @@
 "play_type": "no_play",
 "play_type_nfl": "PENALTY",
 "penalty": 1.0,
-"desc": "(2:21) (No Huddle, Shotgun) 14-S.Darnold sacked at CHI 37 for -5 yards (98-M.Sweat). PENALTY on CHI-6-K.Gordon, Defensive Holding, 5 yards, enforced at CHI 32 - No Play."
+"desc": "(2:21) (No Huddle, Shotgun) 14-S.Darnold sacked at CHI 37 for -5 yards (98-M.Sweat). PENALTY on CHI-6-K.Gordon, Defensive Holding, 5 yards, enforced at CHI 32 - No Play.",
+"spread_line": 3.0,
+"vegas_wp": 0.2176419347524643
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2887,7 +3055,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(2:02) 26-Z.Charbonnet left end to CHI 26 for 1 yard (53-T.Edwards)."
+"desc": "(2:02) 26-Z.Charbonnet left end to CHI 26 for 1 yard (53-T.Edwards).",
+"spread_line": 3.0,
+"vegas_wp": 0.28524523973464966
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2921,7 +3091,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(1:22) (Shotgun) 14-S.Darnold pass short left to 15-T.Horton pushed ob at CHI 13 for 13 yards (29-T.Stevenson)."
+"desc": "(1:22) (Shotgun) 14-S.Darnold pass short left to 15-T.Horton pushed ob at CHI 13 for 13 yards (29-T.Stevenson).",
+"spread_line": 3.0,
+"vegas_wp": 0.2856816053390503
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2955,7 +3127,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(:45) 26-Z.Charbonnet left end pushed ob at CHI 11 for 2 yards (29-T.Stevenson)."
+"desc": "(:45) 26-Z.Charbonnet left end pushed ob at CHI 11 for 2 yards (29-T.Stevenson).",
+"spread_line": 3.0,
+"vegas_wp": 0.3137016296386719
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -2989,7 +3163,9 @@
 "play_type": "no_play",
 "play_type_nfl": "PENALTY",
 "penalty": 1.0,
-"desc": "(:14) 14-S.Darnold pass short left to 11-J.Smith-Njigba pushed ob at CHI 1 for 10 yards (29-T.Stevenson). PENALTY on SEA-11-J.Smith-Njigba, Offensive Pass Interference, 10 yards, enforced at CHI 11 - No Play."
+"desc": "(:14) 14-S.Darnold pass short left to 11-J.Smith-Njigba pushed ob at CHI 1 for 10 yards (29-T.Stevenson). PENALTY on SEA-11-J.Smith-Njigba, Offensive Pass Interference, 10 yards, enforced at CHI 11 - No Play.",
+"spread_line": 3.0,
+"vegas_wp": 0.2938745617866516
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3023,7 +3199,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(10:58) 4-D.Swift right tackle to CHI 49 for 5 yards (13-E.Jones)."
+"desc": "(10:58) 4-D.Swift right tackle to CHI 49 for 5 yards (13-E.Jones).",
+"spread_line": 3.0,
+"vegas_wp": 0.45603516697883606
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3057,7 +3235,9 @@
 "play_type": null,
 "play_type_nfl": "END_QUARTER",
 "penalty": null,
-"desc": "END QUARTER 3"
+"desc": "END QUARTER 3",
+"spread_line": 3.0,
+"vegas_wp": 0.2657982409000397
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3091,7 +3271,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(15:00) (Shotgun) 14-S.Darnold pass incomplete short right to 11-J.Smith-Njigba. The incomplete pass was assisted by replay."
+"desc": "(15:00) (Shotgun) 14-S.Darnold pass incomplete short right to 11-J.Smith-Njigba. The incomplete pass was assisted by replay.",
+"spread_line": 3.0,
+"vegas_wp": 0.2657982409000397
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3125,7 +3307,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(14:56) (Shotgun) 14-S.Darnold pass short right to 26-Z.Charbonnet to CHI 15 for 6 yards (6-K.Gordon)."
+"desc": "(14:56) (Shotgun) 14-S.Darnold pass short right to 26-Z.Charbonnet to CHI 15 for 6 yards (6-K.Gordon).",
+"spread_line": 3.0,
+"vegas_wp": 0.24150019884109497
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3159,7 +3343,9 @@
 "play_type": "field_goal",
 "play_type_nfl": "FIELD_GOAL",
 "penalty": 0.0,
-"desc": "(14:13) 5-J.Myers 33 yard field goal is BLOCKED (94-A.Booker), Center-41-C.Stoll, Holder-4-M.Dickson."
+"desc": "(14:13) 5-J.Myers 33 yard field goal is BLOCKED (94-A.Booker), Center-41-C.Stoll, Holder-4-M.Dickson.",
+"spread_line": 3.0,
+"vegas_wp": 0.19768258929252625
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3193,7 +3379,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(14:09) 18-C.Williams pass incomplete deep middle to 13-Z.Thomas."
+"desc": "(14:09) 18-C.Williams pass incomplete deep middle to 13-Z.Thomas.",
+"spread_line": 3.0,
+"vegas_wp": 0.9140539169311523
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3227,7 +3415,9 @@
 "play_type": "pass",
 "play_type_nfl": "SACK",
 "penalty": 0.0,
-"desc": "(14:02) (Shotgun) 18-C.Williams sacked at CHI 13 for -10 yards (94-M.Morris)."
+"desc": "(14:02) (Shotgun) 18-C.Williams sacked at CHI 13 for -10 yards (94-M.Morris).",
+"spread_line": 3.0,
+"vegas_wp": 0.9049304723739624
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3261,7 +3451,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(13:14) (Shotgun) 18-C.Williams pass short right to 84-C.Loveland to CHI 21 for 8 yards (0-D.Lawrence; 29-J.Jobe). FUMBLES (0-D.Lawrence), RECOVERED by SEA-0-D.Lawrence at CHI 25. 0-D.Lawrence to CHI 25 for no gain (73-J.Jackson)."
+"desc": "(13:14) (Shotgun) 18-C.Williams pass short right to 84-C.Loveland to CHI 21 for 8 yards (0-D.Lawrence; 29-J.Jobe). FUMBLES (0-D.Lawrence), RECOVERED by SEA-0-D.Lawrence at CHI 25. 0-D.Lawrence to CHI 25 for no gain (73-J.Jackson).",
+"spread_line": 3.0,
+"vegas_wp": 0.8771180510520935
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3295,7 +3487,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(13:06) 8-J.Price right end to CHI 16 for 9 yards (1-J.Johnson; 31-D.Thieneman). CHI-1-J.Johnson was injured during the play."
+"desc": "(13:06) 8-J.Price right end to CHI 16 for 9 yards (1-J.Johnson; 31-D.Thieneman). CHI-1-J.Johnson was injured during the play.",
+"spread_line": 3.0,
+"vegas_wp": 0.2663882076740265
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3329,7 +3523,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(10:12) 4-D.Swift up the middle to CHI 47 for -2 yards (90-J.Reed)."
+"desc": "(10:12) 4-D.Swift up the middle to CHI 47 for -2 yards (90-J.Reed).",
+"spread_line": 3.0,
+"vegas_wp": 0.49684879183769226
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3363,7 +3559,9 @@
 "play_type": "no_play",
 "play_type_nfl": "PENALTY",
 "penalty": 1.0,
-"desc": "(12:42) 14-S.Darnold pass deep right intended for 10-C.Kupp INTERCEPTED by 21-C.Lewis at CHI -2. Touchback. PENALTY on CHI-20-C.Phillips, Defensive Holding, 5 yards, enforced at CHI 16 - No Play."
+"desc": "(12:42) 14-S.Darnold pass deep right intended for 10-C.Kupp INTERCEPTED by 21-C.Lewis at CHI -2. Touchback. PENALTY on CHI-20-C.Phillips, Defensive Holding, 5 yards, enforced at CHI 16 - No Play.",
+"spread_line": 3.0,
+"vegas_wp": 0.28357553482055664
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3397,7 +3595,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(12:37) 8-J.Price right guard to CHI 7 for 4 yards (31-D.Thieneman; 97-J.Lynch). ** Injury Update: CHI-1-J.Johnson has returned to the game."
+"desc": "(12:37) 8-J.Price right guard to CHI 7 for 4 yards (31-D.Thieneman; 97-J.Lynch). ** Injury Update: CHI-1-J.Johnson has returned to the game.",
+"spread_line": 3.0,
+"vegas_wp": 0.2770485579967499
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3431,7 +3631,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(11:51) 14-S.Darnold pass short left to 10-C.Kupp for 7 yards, TOUCHDOWN."
+"desc": "(11:51) 14-S.Darnold pass short left to 10-C.Kupp for 7 yards, TOUCHDOWN.",
+"spread_line": 3.0,
+"vegas_wp": 0.23786649107933044
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3465,7 +3667,9 @@
 "play_type": "pass",
 "play_type_nfl": "PAT2",
 "penalty": 0.0,
-"desc": "TWO-POINT CONVERSION ATTEMPT. 14-S.Darnold pass to 15-T.Horton is complete. ATTEMPT SUCCEEDS."
+"desc": "TWO-POINT CONVERSION ATTEMPT. 14-S.Darnold pass to 15-T.Horton is complete. ATTEMPT SUCCEEDS.",
+"spread_line": 3.0,
+"vegas_wp": 0.29203386521339425
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3499,7 +3703,9 @@
 "play_type": "kickoff",
 "play_type_nfl": "KICK_OFF",
 "penalty": 1.0,
-"desc": "5-J.Myers kicks 60 yards from SEA 35 to CHI 5. 13-Z.Thomas pushed ob at CHI 29 for 24 yards (94-M.Morris). PENALTY on SEA-94-M.Morris, Unnecessary Roughness, 15 yards, enforced at CHI 29."
+"desc": "5-J.Myers kicks 60 yards from SEA 35 to CHI 5. 13-Z.Thomas pushed ob at CHI 29 for 24 yards (94-M.Morris). PENALTY on SEA-94-M.Morris, Unnecessary Roughness, 15 yards, enforced at CHI 29.",
+"spread_line": 3.0,
+"vegas_wp": 0.6666181683540344
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3533,7 +3739,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(11:41) 4-D.Swift right end to CHI 43 for -1 yards (90-J.Reed, 58-D.Hall)."
+"desc": "(11:41) 4-D.Swift right end to CHI 43 for -1 yards (90-J.Reed, 58-D.Hall).",
+"spread_line": 3.0,
+"vegas_wp": 0.6970653533935547
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3567,7 +3775,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(11:00) 18-C.Williams pass short middle to 84-C.Loveland to SEA 45 for 12 yards (3-N.Emmanwori)."
+"desc": "(11:00) 18-C.Williams pass short middle to 84-C.Loveland to SEA 45 for 12 yards (3-N.Emmanwori).",
+"spread_line": 3.0,
+"vegas_wp": 0.6759033203125
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3601,7 +3811,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(10:27) 4-D.Swift right tackle to SEA 42 for 3 yards (98-R.Mills; 90-J.Reed)."
+"desc": "(10:27) 4-D.Swift right tackle to SEA 42 for 3 yards (98-R.Mills; 90-J.Reed).",
+"spread_line": 3.0,
+"vegas_wp": 0.7439330816268921
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3635,7 +3847,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(9:32) (Shotgun) 18-C.Williams pass short middle to 10-L.Burden to SEA 45 for 8 yards (13-E.Jones; 32-D.Thomas)."
+"desc": "(9:32) (Shotgun) 18-C.Williams pass short middle to 10-L.Burden to SEA 45 for 8 yards (13-E.Jones; 32-D.Thomas).",
+"spread_line": 3.0,
+"vegas_wp": 0.47851788997650146
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3669,7 +3883,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(9:47) 4-D.Swift right tackle to SEA 39 for 3 yards (3-N.Emmanwori; 0-D.Lawrence)."
+"desc": "(9:47) 4-D.Swift right tackle to SEA 39 for 3 yards (3-N.Emmanwori; 0-D.Lawrence).",
+"spread_line": 3.0,
+"vegas_wp": 0.7508129477500916
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3703,7 +3919,9 @@
 "play_type": "no_play",
 "play_type_nfl": "PENALTY",
 "penalty": 1.0,
-"desc": "(9:01) PENALTY on CHI, Delay of Game, 5 yards, enforced at SEA 39 - No Play."
+"desc": "(9:01) PENALTY on CHI, Delay of Game, 5 yards, enforced at SEA 39 - No Play.",
+"spread_line": 3.0,
+"vegas_wp": 0.7521811127662659
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3737,7 +3955,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(9:01) (Shotgun) 14-K.Raymond right end to SEA 5 for 39 yards (28-N.Pritchett)."
+"desc": "(9:01) (Shotgun) 14-K.Raymond right end to SEA 5 for 39 yards (28-N.Pritchett).",
+"spread_line": 3.0,
+"vegas_wp": 0.7248654961585999
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3771,7 +3991,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(8:33) (No Huddle, Shotgun) 4-D.Swift right end for 5 yards, TOUCHDOWN."
+"desc": "(8:33) (No Huddle, Shotgun) 4-D.Swift right end for 5 yards, TOUCHDOWN.",
+"spread_line": 3.0,
+"vegas_wp": 0.8320811986923218
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3805,7 +4027,9 @@
 "play_type": "extra_point",
 "play_type_nfl": "XP_KICK",
 "penalty": 0.0,
-"desc": "8-C.Santos extra point is GOOD, Center-46-S.Daly, Holder-19-T.Taylor."
+"desc": "8-C.Santos extra point is GOOD, Center-46-S.Daly, Holder-19-T.Taylor.",
+"spread_line": 3.0,
+"vegas_wp": 0.8797115979125857
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3839,7 +4063,9 @@
 "play_type": "kickoff",
 "play_type_nfl": "KICK_OFF",
 "penalty": 1.0,
-"desc": "8-C.Santos kicks 62 yards from CHI 35 to SEA 3. 36-G.Holani pushed ob at SEA 22 for 19 yards (31-D.Thieneman). PENALTY on SEA-85-I.Charles, Unnecessary Roughness, 11 yards, enforced at SEA 22."
+"desc": "8-C.Santos kicks 62 yards from CHI 35 to SEA 3. 36-G.Holani pushed ob at SEA 22 for 19 yards (31-D.Thieneman). PENALTY on SEA-85-I.Charles, Unnecessary Roughness, 11 yards, enforced at SEA 22.",
+"spread_line": 3.0,
+"vegas_wp": 0.11958817392587662
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3873,7 +4099,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(8:24) 14-S.Darnold pass incomplete short middle to 8-J.Price."
+"desc": "(8:24) 14-S.Darnold pass incomplete short middle to 8-J.Price.",
+"spread_line": 3.0,
+"vegas_wp": 0.10523255169391632
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3907,7 +4135,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(8:20) (Shotgun) 14-S.Darnold pass short right to 8-J.Price to SEA 17 for 6 yards (94-A.Booker; 95-S.Turner)."
+"desc": "(8:20) (Shotgun) 14-S.Darnold pass short right to 8-J.Price to SEA 17 for 6 yards (94-A.Booker; 95-S.Turner).",
+"spread_line": 3.0,
+"vegas_wp": 0.09497587382793427
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3941,7 +4171,9 @@
 "play_type": "no_play",
 "play_type_nfl": "PENALTY",
 "penalty": 1.0,
-"desc": "(7:40) (Shotgun) 14-S.Darnold sacked at SEA 8 for -9 yards (98-M.Sweat). PENALTY on CHI-29-T.Stevenson, Defensive Holding, 5 yards, enforced at SEA 17 - No Play."
+"desc": "(7:40) (Shotgun) 14-S.Darnold sacked at SEA 8 for -9 yards (98-M.Sweat). PENALTY on CHI-29-T.Stevenson, Defensive Holding, 5 yards, enforced at SEA 17 - No Play.",
+"spread_line": 3.0,
+"vegas_wp": 0.09449571371078491
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -3975,7 +4207,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(8:49) (Shotgun) 18-C.Williams pass short left to 10-L.Burden to SEA 40 for 5 yards (39-T.Okada)."
+"desc": "(8:49) (Shotgun) 18-C.Williams pass short left to 10-L.Burden to SEA 40 for 5 yards (39-T.Okada).",
+"spread_line": 3.0,
+"vegas_wp": 0.49804913997650146
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4009,7 +4243,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(7:13) 8-J.Price right tackle to SEA 22 for no gain (99-J.Simmons)."
+"desc": "(7:13) 8-J.Price right tackle to SEA 22 for no gain (99-J.Simmons).",
+"spread_line": 3.0,
+"vegas_wp": 0.10083998739719391
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4043,7 +4279,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(6:33) 8-J.Price right tackle to SEA 25 for 3 yards (92-D.Hardy). CHI-93-K.Street was injured during the play. SEA-61-J.Sundell was injured during the play."
+"desc": "(6:33) 8-J.Price right tackle to SEA 25 for 3 yards (92-D.Hardy). CHI-93-K.Street was injured during the play. SEA-61-J.Sundell was injured during the play.",
+"spread_line": 3.0,
+"vegas_wp": 0.07865530252456665
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4077,7 +4315,9 @@
 "play_type": "pass",
 "play_type_nfl": "INTERCEPTION",
 "penalty": 0.0,
-"desc": "(6:01) (Shotgun) 14-S.Darnold pass short middle intended for 88-A.Barner INTERCEPTED by 97-J.Lynch (94-A.Booker) at SEA 22. 97-J.Lynch to SEA 6 for 16 yards (72-A.Lucas)."
+"desc": "(6:01) (Shotgun) 14-S.Darnold pass short middle intended for 88-A.Barner INTERCEPTED by 97-J.Lynch (94-A.Booker) at SEA 22. 97-J.Lynch to SEA 6 for 16 yards (72-A.Lucas).",
+"spread_line": 3.0,
+"vegas_wp": 0.07514612376689911
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4111,7 +4351,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(5:52) 4-D.Swift up the middle to SEA 3 for 3 yards (0-D.Lawrence; 91-B.Murphy)."
+"desc": "(5:52) 4-D.Swift up the middle to SEA 3 for 3 yards (0-D.Lawrence; 91-B.Murphy).",
+"spread_line": 3.0,
+"vegas_wp": 0.9757583141326904
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4145,7 +4387,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 1.0,
-"desc": "(5:12) (Shotgun) 4-D.Swift left guard to SEA 4 for -1 yards (58-D.Hall, 90-J.Reed). PENALTY on SEA-3-N.Emmanwori, Unnecessary Roughness, 2 yards, enforced at SEA 4."
+"desc": "(5:12) (Shotgun) 4-D.Swift left guard to SEA 4 for -1 yards (58-D.Hall, 90-J.Reed). PENALTY on SEA-3-N.Emmanwori, Unnecessary Roughness, 2 yards, enforced at SEA 4.",
+"spread_line": 3.0,
+"vegas_wp": 0.9750620722770691
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4179,7 +4423,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(4:53) 4-D.Swift right end pushed ob at SEA 1 for 1 yard (21-D.Witherspoon)."
+"desc": "(4:53) 4-D.Swift right end pushed ob at SEA 1 for 1 yard (21-D.Witherspoon).",
+"spread_line": 3.0,
+"vegas_wp": 0.9846829771995544
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4213,7 +4459,9 @@
 "play_type": "no_play",
 "play_type_nfl": "PENALTY",
 "penalty": 1.0,
-"desc": "(4:46) 65-L.Newman reported in as eligible. PENALTY on CHI, Delay of Game, 4 yards, enforced at SEA 1 - No Play."
+"desc": "(4:46) 65-L.Newman reported in as eligible. PENALTY on CHI, Delay of Game, 4 yards, enforced at SEA 1 - No Play.",
+"spread_line": 3.0,
+"vegas_wp": 0.98215252161026
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4247,7 +4495,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(4:46) 4-D.Swift left guard for 5 yards, TOUCHDOWN."
+"desc": "(4:46) 4-D.Swift left guard for 5 yards, TOUCHDOWN.",
+"spread_line": 3.0,
+"vegas_wp": 0.9746102690696716
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4281,7 +4531,9 @@
 "play_type": "extra_point",
 "play_type_nfl": "XP_KICK",
 "penalty": 0.0,
-"desc": "8-C.Santos extra point is GOOD, Center-46-S.Daly, Holder-19-T.Taylor."
+"desc": "8-C.Santos extra point is GOOD, Center-46-S.Daly, Holder-19-T.Taylor.",
+"spread_line": 3.0,
+"vegas_wp": 0.9957384234165335
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4315,7 +4567,9 @@
 "play_type": "kickoff",
 "play_type_nfl": "KICK_OFF",
 "penalty": 0.0,
-"desc": "8-C.Santos kicks 63 yards from CHI 35 to SEA 2. 36-G.Holani to SEA 24 for 22 yards (30-Z.Scott; 44-N.Sewell)."
+"desc": "8-C.Santos kicks 63 yards from CHI 35 to SEA 2. 36-G.Holani to SEA 24 for 22 yards (30-Z.Scott; 44-N.Sewell).",
+"spread_line": 3.0,
+"vegas_wp": 0.0041407085955142975
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4349,7 +4603,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(8:12) (Shotgun) 18-C.Williams pass incomplete short middle to 84-C.Loveland."
+"desc": "(8:12) (Shotgun) 18-C.Williams pass incomplete short middle to 84-C.Loveland.",
+"spread_line": 3.0,
+"vegas_wp": 0.5337691307067871
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4383,7 +4639,9 @@
 "play_type": "no_play",
 "play_type_nfl": "PENALTY",
 "penalty": 1.0,
-"desc": "(4:35) (Shotgun) 14-S.Darnold pass incomplete short left [97-J.Lynch]. ** Injury Update: SEA-61-J.Sundell has returned to the game. PENALTY on CHI-94-A.Booker, Roughing the Passer, 15 yards, enforced at SEA 24 - No Play."
+"desc": "(4:35) (Shotgun) 14-S.Darnold pass incomplete short left [97-J.Lynch]. ** Injury Update: SEA-61-J.Sundell has returned to the game. PENALTY on CHI-94-A.Booker, Roughing the Passer, 15 yards, enforced at SEA 24 - No Play.",
+"spread_line": 3.0,
+"vegas_wp": 0.004171759821474552
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4417,7 +4675,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(4:30) (Shotgun) 14-S.Darnold pass short right to 11-J.Smith-Njigba to 50 for 11 yards (1-J.Johnson)."
+"desc": "(4:30) (Shotgun) 14-S.Darnold pass short right to 11-J.Smith-Njigba to 50 for 11 yards (1-J.Johnson).",
+"spread_line": 3.0,
+"vegas_wp": 0.00474774744361639
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4451,7 +4711,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(4:08) (No Huddle, Shotgun) 14-S.Darnold pass short left to 15-T.Horton ran ob at CHI 39 for 11 yards."
+"desc": "(4:08) (No Huddle, Shotgun) 14-S.Darnold pass short left to 15-T.Horton ran ob at CHI 39 for 11 yards.",
+"spread_line": 3.0,
+"vegas_wp": 0.0028239726088941097
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4485,7 +4747,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(4:03) (Shotgun) 14-S.Darnold pass short middle to 11-J.Smith-Njigba to CHI 24 for 15 yards (29-T.Stevenson). Penalty on CHI-6-K.Gordon, Illegal Contact, declined."
+"desc": "(4:03) (Shotgun) 14-S.Darnold pass short middle to 11-J.Smith-Njigba to CHI 24 for 15 yards (29-T.Stevenson). Penalty on CHI-6-K.Gordon, Illegal Contact, declined.",
+"spread_line": 3.0,
+"vegas_wp": 0.003447045339271426
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4519,7 +4783,9 @@
 "play_type": "kickoff",
 "play_type_nfl": "KICK_OFF",
 "penalty": 0.0,
-"desc": "8-C.Santos kicks 56 yards from CHI 35 to SEA 9. 36-G.Holani to SEA 32 for 23 yards (57-J.Sanborn)."
+"desc": "8-C.Santos kicks 56 yards from CHI 35 to SEA 9. 36-G.Holani to SEA 32 for 23 yards (57-J.Sanborn).",
+"spread_line": 3.0,
+"vegas_wp": 0.5959430932998657
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4553,7 +4819,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(3:59) (Shotgun) 14-S.Darnold pass incomplete short left to 8-J.Price [98-M.Sweat]."
+"desc": "(3:59) (Shotgun) 14-S.Darnold pass incomplete short left to 8-J.Price [98-M.Sweat].",
+"spread_line": 3.0,
+"vegas_wp": 0.00504641467705369
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4587,7 +4855,9 @@
 "play_type": "no_play",
 "play_type_nfl": "PENALTY",
 "penalty": 1.0,
-"desc": "(3:54) (Shotgun) PENALTY on SEA-53-Q.Nelson, False Start, 5 yards, enforced at CHI 24 - No Play."
+"desc": "(3:54) (Shotgun) PENALTY on SEA-53-Q.Nelson, False Start, 5 yards, enforced at CHI 24 - No Play.",
+"spread_line": 3.0,
+"vegas_wp": 0.004148449283093214
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4621,7 +4891,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(3:54) (Shotgun) 14-S.Darnold pass incomplete deep left to 11-J.Smith-Njigba."
+"desc": "(3:54) (Shotgun) 14-S.Darnold pass incomplete deep left to 11-J.Smith-Njigba.",
+"spread_line": 3.0,
+"vegas_wp": 0.003065750701352954
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4655,7 +4927,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(3:49) (Shotgun) 14-S.Darnold scrambles up the middle to CHI 15 for 14 yards (12-D.Bush)."
+"desc": "(3:49) (Shotgun) 14-S.Darnold scrambles up the middle to CHI 15 for 14 yards (12-D.Bush).",
+"spread_line": 3.0,
+"vegas_wp": 0.0026786928065121174
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4689,7 +4963,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(8:08) 23-R.Johnson right tackle to SEA 31 for 9 yards (39-T.Okada; 13-E.Jones)."
+"desc": "(8:08) 23-R.Johnson right tackle to SEA 31 for 9 yards (39-T.Okada; 13-E.Jones).",
+"spread_line": 3.0,
+"vegas_wp": 0.5183404684066772
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4723,7 +4999,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(3:21) (No Huddle, Shotgun) 14-S.Darnold pass short right to 15-T.Horton to CHI 13 for 2 yards (1-J.Johnson)."
+"desc": "(3:21) (No Huddle, Shotgun) 14-S.Darnold pass short right to 15-T.Horton to CHI 13 for 2 yards (1-J.Johnson).",
+"spread_line": 3.0,
+"vegas_wp": 0.002271083416417241
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4757,7 +5035,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(2:55) (No Huddle, Shotgun) 14-S.Darnold pass incomplete short left to 10-C.Kupp."
+"desc": "(2:55) (No Huddle, Shotgun) 14-S.Darnold pass incomplete short left to 10-C.Kupp.",
+"spread_line": 3.0,
+"vegas_wp": 0.0036321745719760656
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4791,7 +5071,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(2:50) (Shotgun) 14-S.Darnold pass short middle to 88-A.Barner to CHI 7 for 6 yards (21-C.Lewis)."
+"desc": "(2:50) (Shotgun) 14-S.Darnold pass short middle to 88-A.Barner to CHI 7 for 6 yards (21-C.Lewis).",
+"spread_line": 3.0,
+"vegas_wp": 0.0028871118556708097
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4825,7 +5107,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(2:25) (No Huddle, Shotgun) 14-S.Darnold pass incomplete short right to 11-J.Smith-Njigba (99-J.Simmons)."
+"desc": "(2:25) (No Huddle, Shotgun) 14-S.Darnold pass incomplete short right to 11-J.Smith-Njigba (99-J.Simmons).",
+"spread_line": 3.0,
+"vegas_wp": 0.0025843740440905094
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4859,7 +5143,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(2:21) (Shotgun) 14-S.Darnold pass incomplete short left to 10-C.Kupp."
+"desc": "(2:21) (Shotgun) 14-S.Darnold pass incomplete short left to 10-C.Kupp.",
+"spread_line": 3.0,
+"vegas_wp": 0.0017178767593577504
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4893,7 +5179,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(2:16) 4-D.Swift right tackle to CHI 11 for 4 yards (39-T.Okada; 13-E.Jones)."
+"desc": "(2:16) 4-D.Swift right tackle to CHI 11 for 4 yards (39-T.Okada; 13-E.Jones).",
+"spread_line": 3.0,
+"vegas_wp": 0.9990904331207275
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4927,7 +5215,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(2:00) 4-D.Swift right tackle to CHI 15 for 4 yards (90-J.Reed)."
+"desc": "(2:00) 4-D.Swift right tackle to CHI 15 for 4 yards (90-J.Reed).",
+"spread_line": 3.0,
+"vegas_wp": 0.9990936517715454
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4961,7 +5251,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(1:23) 4-D.Swift right end to CHI 19 for 4 yards (94-M.Morris)."
+"desc": "(1:23) 4-D.Swift right end to CHI 19 for 4 yards (94-M.Morris).",
+"spread_line": 3.0,
+"vegas_wp": 0.9994339346885681
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -4995,7 +5287,9 @@
 "play_type": "qb_kneel",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(:37) 18-C.Williams kneels to CHI 18 for -1 yards."
+"desc": "(:37) 18-C.Williams kneels to CHI 18 for -1 yards.",
+"spread_line": 3.0,
+"vegas_wp": 0.9997456669807434
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5029,7 +5323,9 @@
 "play_type": null,
 "play_type_nfl": "END_GAME",
 "penalty": null,
-"desc": "END GAME"
+"desc": "END GAME",
+"spread_line": 3.0,
+"vegas_wp": null
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5063,7 +5359,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(7:24) (Shotgun) 18-C.Williams pass short right to 84-C.Loveland ran ob at SEA 16 for 15 yards. Penalty on SEA-29-J.Jobe, Illegal Contact, declined."
+"desc": "(7:24) (Shotgun) 18-C.Williams pass short right to 84-C.Loveland ran ob at SEA 16 for 15 yards. Penalty on SEA-29-J.Jobe, Illegal Contact, declined.",
+"spread_line": 3.0,
+"vegas_wp": 0.5302671194076538
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5097,7 +5395,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(6:52) (Shotgun) 23-R.Johnson left guard to SEA 13 for 3 yards (99-L.Williams)."
+"desc": "(6:52) (Shotgun) 23-R.Johnson left guard to SEA 13 for 3 yards (99-L.Williams).",
+"spread_line": 3.0,
+"vegas_wp": 0.5856531858444214
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5131,7 +5431,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(6:12) (Shotgun) 18-C.Williams pass short right to 10-L.Burden to SEA 4 for 9 yards (13-E.Jones)."
+"desc": "(6:12) (Shotgun) 18-C.Williams pass short right to 10-L.Burden to SEA 4 for 9 yards (13-E.Jones).",
+"spread_line": 3.0,
+"vegas_wp": 0.5839332938194275
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5165,7 +5467,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(5:46) (No Huddle, Shotgun) 23-R.Johnson up the middle to SEA 1 for 3 yards (20-J.Love; 13-E.Jones)."
+"desc": "(5:46) (No Huddle, Shotgun) 23-R.Johnson up the middle to SEA 1 for 3 yards (20-J.Love; 13-E.Jones).",
+"spread_line": 3.0,
+"vegas_wp": 0.6136966943740845
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5199,7 +5503,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(5:30) (No Huddle, Shotgun) 18-C.Williams pass short right to 10-L.Burden for 1 yard, TOUCHDOWN."
+"desc": "(5:30) (No Huddle, Shotgun) 18-C.Williams pass short right to 10-L.Burden for 1 yard, TOUCHDOWN.",
+"spread_line": 3.0,
+"vegas_wp": 0.6178023815155029
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5233,7 +5539,9 @@
 "play_type": "extra_point",
 "play_type_nfl": "XP_KICK",
 "penalty": 0.0,
-"desc": "8-C.Santos extra point is GOOD, Center-46-S.Daly, Holder-19-T.Taylor."
+"desc": "8-C.Santos extra point is GOOD, Center-46-S.Daly, Holder-19-T.Taylor.",
+"spread_line": 3.0,
+"vegas_wp": 0.6169507812122013
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5267,7 +5575,9 @@
 "play_type": "kickoff",
 "play_type_nfl": "KICK_OFF",
 "penalty": 0.0,
-"desc": "8-C.Santos kicks 65 yards from CHI 35 to landing zone to end zone, Touchback to the SEA 20."
+"desc": "8-C.Santos kicks 65 yards from CHI 35 to landing zone to end zone, Touchback to the SEA 20.",
+"spread_line": 3.0,
+"vegas_wp": 0.38267186284065247
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5301,7 +5611,9 @@
 "play_type": "pass",
 "play_type_nfl": "SACK",
 "penalty": 1.0,
-"desc": "(5:25) (Shotgun) 14-S.Darnold sacked at SEA 14 for -6 yards (99-J.Simmons). PENALTY on CHI-50-G.Jarrett, Face Mask, 15 yards, enforced at SEA 14."
+"desc": "(5:25) (Shotgun) 14-S.Darnold sacked at SEA 14 for -6 yards (99-J.Simmons). PENALTY on CHI-50-G.Jarrett, Face Mask, 15 yards, enforced at SEA 14.",
+"spread_line": 3.0,
+"vegas_wp": 0.38018855452537537
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5335,7 +5647,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(14:55) 26-Z.Charbonnet left guard to SEA 37 for 5 yards (29-T.Stevenson; 99-J.Simmons)."
+"desc": "(14:55) 26-Z.Charbonnet left guard to SEA 37 for 5 yards (29-T.Stevenson; 99-J.Simmons).",
+"spread_line": 3.0,
+"vegas_wp": 0.6071801781654358
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5369,7 +5683,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(5:02) 26-Z.Charbonnet up the middle to SEA 31 for 2 yards (12-D.Bush; 99-J.Simmons)."
+"desc": "(5:02) 26-Z.Charbonnet up the middle to SEA 31 for 2 yards (12-D.Bush; 99-J.Simmons).",
+"spread_line": 3.0,
+"vegas_wp": 0.3891408443450928
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5403,7 +5719,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(4:23) (Shotgun) 14-S.Darnold pass incomplete short middle to 26-Z.Charbonnet."
+"desc": "(4:23) (Shotgun) 14-S.Darnold pass incomplete short middle to 26-Z.Charbonnet.",
+"spread_line": 3.0,
+"vegas_wp": 0.4045921564102173
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5437,7 +5755,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(4:20) (Shotgun) 14-S.Darnold scrambles up the middle to SEA 37 for 6 yards (12-D.Bush)."
+"desc": "(4:20) (Shotgun) 14-S.Darnold scrambles up the middle to SEA 37 for 6 yards (12-D.Bush).",
+"spread_line": 3.0,
+"vegas_wp": 0.38494375348091125
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5471,7 +5791,9 @@
 "play_type": "punt",
 "play_type_nfl": "PUNT",
 "penalty": 0.0,
-"desc": "(3:26) 4-M.Dickson punts 59 yards to CHI 4, Center-41-C.Stoll, downed by SEA-85-I.Charles."
+"desc": "(3:26) 4-M.Dickson punts 59 yards to CHI 4, Center-41-C.Stoll, downed by SEA-85-I.Charles.",
+"spread_line": 3.0,
+"vegas_wp": 0.36594873666763306
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5505,7 +5827,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(3:17) 4-D.Swift up the middle to CHI 5 for 1 yard (99-L.Williams; 90-J.Reed)."
+"desc": "(3:17) 4-D.Swift up the middle to CHI 5 for 1 yard (99-L.Williams; 90-J.Reed).",
+"spread_line": 3.0,
+"vegas_wp": 0.6700223088264465
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5539,7 +5863,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(2:36) (Shotgun) 4-D.Swift left guard to CHI 12 for 7 yards (13-E.Jones)."
+"desc": "(2:36) (Shotgun) 4-D.Swift left guard to CHI 12 for 7 yards (13-E.Jones).",
+"spread_line": 3.0,
+"vegas_wp": 0.6638778448104858
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5573,7 +5899,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(1:54) (Shotgun) 18-C.Williams pass incomplete deep left to 14-K.Raymond."
+"desc": "(1:54) (Shotgun) 18-C.Williams pass incomplete deep left to 14-K.Raymond.",
+"spread_line": 3.0,
+"vegas_wp": 0.6561070680618286
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5607,7 +5935,9 @@
 "play_type": "punt",
 "play_type_nfl": "PUNT",
 "penalty": 0.0,
-"desc": "(1:48) 19-T.Taylor punts 45 yards to SEA 43, Center-46-S.Daly. 15-T.Horton to SEA 46 for 3 yards (9-J.Walker)."
+"desc": "(1:48) 19-T.Taylor punts 45 yards to SEA 43, Center-46-S.Daly. 15-T.Horton to SEA 46 for 3 yards (9-J.Walker).",
+"spread_line": 3.0,
+"vegas_wp": 0.6198508739471436
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5641,7 +5971,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(1:41) 14-S.Darnold pass short right to 11-J.Smith-Njigba pushed ob at CHI 33 for 21 yards (21-C.Lewis)."
+"desc": "(1:41) 14-S.Darnold pass short right to 11-J.Smith-Njigba pushed ob at CHI 33 for 21 yards (21-C.Lewis).",
+"spread_line": 3.0,
+"vegas_wp": 0.4119568467140198
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5675,7 +6007,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(14:16) 14-S.Darnold pass incomplete short middle to 11-J.Smith-Njigba (6-K.Gordon) [6-K.Gordon]."
+"desc": "(14:16) 14-S.Darnold pass incomplete short middle to 11-J.Smith-Njigba (6-K.Gordon) [6-K.Gordon].",
+"spread_line": 3.0,
+"vegas_wp": 0.6180973052978516
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5709,7 +6043,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(1:06) 8-J.Price right tackle to CHI 25 for 8 yards (44-N.Sewell)."
+"desc": "(1:06) 8-J.Price right tackle to CHI 25 for 8 yards (44-N.Sewell).",
+"spread_line": 3.0,
+"vegas_wp": 0.428847998380661
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5743,7 +6079,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(:25) 14-S.Darnold pass short left to 11-J.Smith-Njigba to CHI 9 for 16 yards (12-D.Bush)."
+"desc": "(:25) 14-S.Darnold pass short left to 11-J.Smith-Njigba to CHI 9 for 16 yards (12-D.Bush).",
+"spread_line": 3.0,
+"vegas_wp": 0.4651957154273987
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5777,7 +6115,9 @@
 "play_type": null,
 "play_type_nfl": "END_QUARTER",
 "penalty": null,
-"desc": "END QUARTER 1"
+"desc": "END QUARTER 1",
+"spread_line": 3.0,
+"vegas_wp": 0.488659530878067
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5811,7 +6151,9 @@
 "play_type": "run",
 "play_type_nfl": "RUSH",
 "penalty": 0.0,
-"desc": "(15:00) 26-Z.Charbonnet right guard to CHI 9 for no gain (97-J.Lynch)."
+"desc": "(15:00) 26-Z.Charbonnet right guard to CHI 9 for no gain (97-J.Lynch).",
+"spread_line": 3.0,
+"vegas_wp": 0.488659530878067
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5845,7 +6187,9 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(14:19) (Shotgun) 14-S.Darnold pass short right to 26-Z.Charbonnet to CHI 15 for -6 yards (99-J.Simmons)."
+"desc": "(14:19) (Shotgun) 14-S.Darnold pass short right to 26-Z.Charbonnet to CHI 15 for -6 yards (99-J.Simmons).",
+"spread_line": 3.0,
+"vegas_wp": 0.46677812933921814
 },
 {
 "game_id": "2026_08_CHI_SEA",
@@ -5879,6 +6223,8 @@
 "play_type": "pass",
 "play_type_nfl": "PASS",
 "penalty": 0.0,
-"desc": "(13:35) (Shotgun) 14-S.Darnold pass short middle to 26-Z.Charbonnet to CHI 9 for 6 yards (12-D.Bush)."
+"desc": "(13:35) (Shotgun) 14-S.Darnold pass short middle to 26-Z.Charbonnet to CHI 9 for 6 yards (12-D.Bush).",
+"spread_line": 3.0,
+"vegas_wp": 0.4106730818748474
 }
 ]

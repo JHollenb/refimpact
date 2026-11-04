@@ -67,7 +67,7 @@ def relationships(games: list[dict], metric: str = "penalty_epa") -> dict:
         "unit": "one game; home-team perspective",
         "metric": metric,
         "metric_label": {
-            "penalty_epa": "Net measured penalty EPA for home team (points)",
+            "penalty_epa": "Expected margin shift for home team, ignores score (points)",
             "production_epa": "Home minus away offensive EPA per snap",
             "drive_epa": "Home minus away observed drive EPA (points)",
         }[metric],

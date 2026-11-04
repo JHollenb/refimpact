@@ -172,8 +172,15 @@ def create_app(
             "The non-Vegas WP model uses score, clocks, down/distance, field position, "
             "possession, timeouts, home field and second-half receiver; EPA is not converted "
             "to win probability by a constant multiplier.",
-            "net_home_epa": "sum of measured call EPA impacts oriented to the home team; "
-            "a descriptive local-impact ledger, not a final-score adjustment",
+            "net_home_epa": "Expected margin shift, ignores score: sum of measured call EPA "
+            "impacts oriented to the home team. EP has no score input, so a blowout flag counts "
+            "in full. Read per-flag win-chance swings first; this is not a final-score adjustment",
+            "wp_display": "Whole points. Swings under about 2 pp are within model noise. The "
+            "spread (Vegas) WP model is shown beside the non-Vegas model the ledger uses.",
+            "late_clock": "Inside 2:00 of a half a range across next-snap waits is reported. The "
+            "headline swing keeps the same clock unless the team needing time has no timeout: "
+            "then 10 s if it has the ball, 20 s if it is on defense. Spent timeouts are not "
+            "priced.",
             "automatic_penalties": "All reported dispositions, including flags with penalty=0; "
             "accept/decline/no-flag states are valued where recoverable.",
             "alternative": "Hold described play result fixed; missing foul spots become labeled "
@@ -192,6 +199,9 @@ def create_app(
             "Penalty effects must not be added to production again.",
             "drive_epa": "Sum native EPA for the driving team, including punt/FG endings and "
             "excluding kickoff/try EPA. Unknown rows are disclosed.",
+            "kicks_and_scores": "Erased touchdowns and field goals are points plus the opponent "
+            "after the kick, at a season-mean measured start spot; approximate and labeled. Punts, "
+            "kickoffs and fumbles use the written result when it is unambiguous.",
             "nullified_plays": "Automatically extract the written action preceding the "
             "flag. A no-play "
             "statistical zero is never an erased zero-yard play. Compare actual enforcement "
@@ -221,6 +231,7 @@ def create_app(
             "penalty_rows": sum(g["penalty_rows"] for g in rows),
             "review_calls": sum(g["review_calls"] for g in rows),
             "valued_penalties": sum(g.get("valued_penalties", g["scored_calls"]) for g in rows),
+            "unpriced_penalties": sum(g.get("unpriced_penalties") or 0 for g in rows),
             "penalty_dispositions": {
                 name: sum(
                     g.get("penalty_coverage", {}).get("dispositions", {}).get(name, 0) for g in rows
@@ -400,7 +411,10 @@ def create_app(
             "penalty_rows",
             "net_home_epa",
             "largest_call_swing_pp",
+            "swings_over_5pp",
             "valued_penalties",
+            "unpriced_penalties",
+            "declined_penalties",
             "net_home_production_epa_per_snap",
             "net_home_drive_epa",
         ]

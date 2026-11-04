@@ -10,7 +10,7 @@ from collections import defaultdict
 
 import polars as pl
 
-from refimpact.penalties import finite, is_flagged
+from refimpact.penalties import finite, is_flagged, took_effect
 
 SNAPS = {"run", "pass", "qb_kneel", "qb_spike"}
 DRIVE_END_PLAYS = {"punt", "field_goal"}
@@ -151,7 +151,10 @@ def build_production(frame: pl.DataFrame, penalties: list[dict]) -> tuple[dict, 
                 "penalty_events": len(events[drive_id]),
                 "penalty_ids": [e["id"] for e in events[drive_id]],
                 "known_penalty_enforcement_epa": sum_or_none(known_effects),
-                "penalty_effects_valued": len(known_effects),
+                "penalty_effects_valued": sum(
+                    took_effect(e) and e["enforcement_epa"] is not None for e in events[drive_id]
+                ),
+                "penalty_events_took_effect": sum(took_effect(e) for e in events[drive_id]),
                 "timeline": timeline,
                 "accounting_note": "Drive EPA is the sum of native play EPA, including "
                 "enforcement, "

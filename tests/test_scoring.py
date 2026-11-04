@@ -94,7 +94,7 @@ def test_neutral_site_and_retractable_features(comparison):
 
 def test_tweet_units_and_budget(impact):
     text = render_tweet(impact)
-    assert "-3.0 pp" in text
+    assert "-3 pp" in text
     assert "-0.50 points" in text
     assert "vs no flag" in text
     assert text.isascii() and len(text) <= 280

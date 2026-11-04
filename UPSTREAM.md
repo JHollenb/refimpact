@@ -6,12 +6,14 @@ Models: `nflverse/fastrmodels` commit
 - https://github.com/nflverse/fastrmodels/tree/75c7b68bc49535370236c38c9826265da075bd71
 - `data/ep_model.rda`: SHA256 `fa45093d478fdd4534fa48860678ff99d597a67c340821db075c47fdab9102af`
 - `data/wp_model.rda`: SHA256 `a073049d2e5362d386ce479b5b64b6e2abd58795c723f574eb5e092be20e5ea1`
+- `data/wp_model_spread.rda`: SHA256 `5b89562edb2e6fd9dd12fd686a51f05d76222db9eb625995ed93a693ae5e44cb`.
+  Shown beside the non-Vegas model; the ledger's values do not use it.
 
 Feature encoding and point weights translated from `nflverse/nflfastR` commit
 `701bbf38bc1c030ff9f1f4825a23191287d3903c`, MIT license:
 
 - `R/helper_add_nflscrapr_mutations.R`: `make_model_mutations`
-- `R/helper_add_ep_wp.R`: `ep_model_select`, `wp_model_select`, `prepare_wp_data`
+- `R/helper_add_ep_wp.R`: `ep_model_select`, `wp_model_select`, `wp_spread_model_select`, `prepare_wp_data`
 - `R/ep_wp_calculators.R`: `calculate_expected_points`, `calculate_win_probability`
 - https://github.com/nflverse/nflfastR/tree/701bbf38bc1c030ff9f1f4825a23191287d3903c
 

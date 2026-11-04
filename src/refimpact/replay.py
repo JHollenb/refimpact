@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 from collections import Counter
 from pathlib import Path
@@ -29,17 +30,16 @@ def load_pbp(season: int, path: Path | None = None) -> pl.DataFrame:
 
 
 def second_half_receivers(rows: list[dict]) -> dict[str, str]:
-    """Use the explicit input, otherwise nflfastR's opening-possession inference."""
+    """Use the explicit input, otherwise the team that kicked the game's first kickoff row.
+
+    A flagged opening kick has a null kickoff_attempt and its re-kick is after 3600 s, so neither
+    can identify it. Upstream's first-non-null-defteam rule misreads pregame comment rows.
+    """
     result = {}
     for r in rows:
         if r.get("receive_2h_ko") == 1 and r.get("posteam"):
             result[r["game_id"]] = r["posteam"]
-        elif (
-            r.get("qtr") == 1
-            and r.get("game_seconds_remaining") == 3600
-            and r.get("kickoff_attempt") == 1
-            and r.get("defteam")
-        ):
+        elif r.get("play_type") == "kickoff" and r.get("defteam"):
             result.setdefault(r["game_id"], r["defteam"])
     return result
 
@@ -48,6 +48,7 @@ def state_from_row(r: dict, receiver: str | None) -> State:
     roof = r.get("roof")
     if roof is None:
         raise ValueError("missing roof")
+    spread = r.get("spread_line")
     return State(
         season=r["season"],
         home_team=r["home_team"],
@@ -66,6 +67,9 @@ def state_from_row(r: dict, receiver: str | None) -> State:
         second_half_receiver=receiver,
         roof=roof,
         neutral_site=r.get("location") == "Neutral",
+        home_spread=float(spread)
+        if isinstance(spread, (int, float)) and math.isfinite(spread)
+        else None,
     )
 
 
@@ -162,12 +166,15 @@ def derive_week(
     season: int,
     week: int,
 ) -> dict:
+    from refimpact.penalties import kickoff_start_spots
     from refimpact.tweets import render_tweet
 
+    ordering = ["game_id", "order_sequence" if "order_sequence" in frame.columns else "play_id"]
+    # Measured over all the season's rows supplied, not one week's few kickoffs.
+    kick_spots = kickoff_start_spots(frame.sort(ordering).to_dicts())
     frame = frame.filter((pl.col("season") == season) & (pl.col("week") == week))
     if frame.is_empty():
         raise ValueError(f"No plays for {season} week {week}")
-    ordering = ["game_id", "order_sequence" if "order_sequence" in frame.columns else "play_id"]
     frame = frame.sort(ordering)
     rows = frame.to_dicts()
     receivers = second_half_receivers(rows)
@@ -199,12 +206,16 @@ def derive_week(
         except (ValueError, TypeError, KeyError):
             continue
         p = scorer.predict([s], s.possession)[0]
+        vegas = scorer.vegas_wp([s], s.possession)[0]
         parity.append(
             {
                 "game_id": r["game_id"],
                 "play_id": r["play_id"],
                 "ep_error": p.ep - r["ep"],
                 "wp_error": p.wp - r["wp"],
+                "vegas_wp_error": vegas - r["vegas_wp"]
+                if vegas is not None and r.get("vegas_wp") is not None
+                else None,
             }
         )
     for i, r in enumerate(rows):
@@ -233,7 +244,7 @@ def derive_week(
     from refimpact.production import build_production
     from refimpact.progression import build_progression
 
-    penalties = build_penalties(frame, scorer)
+    penalties = build_penalties(frame, scorer, kick_spots)
     production, drives = build_production(frame, penalties)
     progression = build_progression(frame, penalties, drives)
     summary = {
@@ -255,6 +266,10 @@ def derive_week(
             "rows": len(parity),
             "max_abs_ep_error": max((abs(p["ep_error"]) for p in parity), default=None),
             "max_abs_wp_error": max((abs(p["wp_error"]) for p in parity), default=None),
+            "max_abs_vegas_wp_error": max(
+                (abs(p["vegas_wp_error"]) for p in parity if p["vegas_wp_error"] is not None),
+                default=None,
+            ),
         },
     }
     return {

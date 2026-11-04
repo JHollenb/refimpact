@@ -8,8 +8,8 @@ def render_tweet(impact: Impact) -> str:
     text = (
         f"{c.before.away_team} @ {c.before.home_team} | Q{c.before.qtr} {clock}\n"
         f"{c.ruling}\n"
-        f"{c.reference_team} win chance: {impact.alternative.wp:.1%} -> {impact.actual.wp:.1%} "
-        f"({impact.wp_swing_pp:+.1f} pp)\n"
+        f"{c.reference_team} win chance: {impact.alternative.wp:.0%} -> {impact.actual.wp:.0%} "
+        f"({impact.wp_swing_pp:+.0f} pp)\n"
         f"EPA impact: {impact.epa_impact:+.2f} points\n"
         f"vs {c.alternative_label}\n"
         "Model estimate; ruling correctness not assessed."

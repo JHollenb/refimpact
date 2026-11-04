@@ -1,6 +1,16 @@
 import pytest
 
-from refimpact.penalties import evaluate_row, is_flagged, parse_fouls, penalty_restart, runoff_info
+from refimpact.penalties import (
+    HURRY_DELAY,
+    RUNOUT_DELAY,
+    coverage,
+    evaluate_row,
+    headline_delay,
+    is_flagged,
+    parse_fouls,
+    penalty_restart,
+    runoff_info,
+)
 from refimpact.schema import State
 
 
@@ -173,6 +183,177 @@ def test_q4_clock_sensitivity_includes_last_five_minutes(comparison, scorer):
     }
     result = evaluate_row(r, following, comparison.before.second_half_receiver, scorer)
     assert result["decision"]["timing_scenarios"]
+
+
+def late_row(comparison, seconds, **changes):
+    return source_row(
+        comparison,
+        qtr=4,
+        half_seconds_remaining=seconds,
+        game_seconds_remaining=seconds,
+        penalty=1,
+        down=2,
+        ydstogo=8,
+        desc="Pass to BUF 50 for 10 yards. PENALTY on ARI-1-P, Roughing the Passer, 15 yards, "
+        "enforced at BUF 50.",
+        **changes,
+    )
+
+
+def after(r, seconds):
+    return r | {
+        "down": 1,
+        "ydstogo": 10,
+        "yardline_100": 35,
+        "half_seconds_remaining": seconds,
+        "game_seconds_remaining": seconds,
+    }
+
+
+NO_TIMEOUTS = {"home_timeouts_remaining": 0, "away_timeouts_remaining": 0}
+
+
+def test_inside_two_minutes_headline_is_restart_aware_and_reports_a_range(comparison, scorer):
+    r = late_row(comparison, 110, **NO_TIMEOUTS)  # BUF trails with the ball, out of timeouts.
+    result = evaluate_row(r, after(r, 104), comparison.before.second_half_receiver, scorer)
+    assert result["enforcement_wp_basis"] == "restart_aware"
+    assert result["enforcement_wp_restarts"] == {
+        "actual": "snap",
+        "alternative": "running",
+        "delay_seconds": 10,
+    }
+    common = next(b for b in result["decision"]["branches"] if b["id"] == "no_flag")
+    assert result["enforcement_wp_common_clock_pp"] == common["actual_minus_branch_wp_pp"]
+    case = next(
+        c
+        for c in result["decision"]["timing_comparisons"]
+        if c["alternative_branch"] == "no_flag" and c["next_snap_delay_seconds"] == 10
+    )
+    assert result["enforcement_wp_swing_pp"] == case["actual_minus_branch_wp_pp"]
+    low, high = result["enforcement_wp_range"]["min"], result["enforcement_wp_range"]["max"]
+    assert low <= result["enforcement_wp_swing_pp"] <= high
+    assert low <= result["enforcement_wp_common_clock_pp"] <= high
+    # Expected points stay at the common clock; only the win-chance headline moves.
+    assert result["enforcement_epa"] == common["actual_minus_branch_epa"]
+
+
+def test_a_trailing_team_waiting_out_the_half_is_not_a_headline(comparison, scorer):
+    # 2024_18_CHI_GB:4163: a 20 s wait with 15 s left read as +29 pp for the fouling offense.
+    r = late_row(comparison, 14, **NO_TIMEOUTS)  # BUF trails 3-17.
+    result = evaluate_row(r, after(r, 8), comparison.before.second_half_receiver, scorer)
+    assert result["enforcement_wp_basis"] == "common_clock"
+    assert result["enforcement_wp_swing_pp"] == result["enforcement_wp_common_clock_pp"]
+    assert any(
+        c["alternative_phase"] != "scrimmage" for c in result["decision"]["timing_comparisons"]
+    )
+    assert result["enforcement_wp_range"] is not None
+
+
+def test_a_leading_team_running_out_the_half_is_the_clock_effect(comparison, scorer):
+    r = late_row(comparison, 22, posteam_score=17, defteam_score=3, **NO_TIMEOUTS)  # BUF leads.
+    result = evaluate_row(r, after(r, 15), comparison.before.second_half_receiver, scorer)
+    assert result["enforcement_wp_basis"] == "restart_aware"
+    assert result["enforcement_wp_restarts"]["delay_seconds"] == 20
+    case = next(
+        c
+        for c in result["decision"]["timing_comparisons"]
+        if c["alternative_branch"] == "no_flag" and c["next_snap_delay_seconds"] == 20
+    )
+    assert case["alternative_phase"] == "regulation_end" and case["alternative_wp"] == 1.0
+    assert result["enforcement_wp_swing_pp"] == case["actual_minus_branch_wp_pp"] < 0
+
+
+def test_a_trailing_team_with_a_timeout_is_not_charged_a_wait(comparison, scorer):
+    # 2026_01_BUF_HOU:4287: HOU trailed by 5 with 2 timeouts and snapped again at :39 after the
+    # flag. A declared 20 s wait read 12.82 pp against the 1.49 pp at the same clock.
+    r = late_row(
+        comparison,
+        44,
+        posteam_score=31,
+        defteam_score=36,
+        home_timeouts_remaining=2,
+        away_timeouts_remaining=2,
+    )
+    result = evaluate_row(r, after(r, 39), comparison.before.second_half_receiver, scorer)
+    assert result["enforcement_wp_basis"] == "common_clock"
+    assert result["enforcement_wp_restarts"] is None
+    assert result["enforcement_wp_swing_pp"] == result["enforcement_wp_common_clock_pp"]
+    assert result["enforcement_wp_range"]["max"] > result["enforcement_wp_range"]["min"]
+
+
+@pytest.mark.parametrize(
+    ("home_score", "away_score", "home_timeouts", "away_timeouts", "delay"),
+    [
+        (10, 17, 2, 3, 0),  # Home has the ball, trails, has a timeout.
+        (10, 17, 0, 3, HURRY_DELAY),  # Home has the ball, trails, has none.
+        (10, 10, 0, 3, HURRY_DELAY),  # Tied: the offense needs time.
+        (17, 10, 0, 1, 0),  # Home leads: away needs time and has a timeout.
+        (17, 10, 3, 0, RUNOUT_DELAY),  # Home leads: away needs time and has none.
+    ],
+)
+def test_headline_delay_follows_the_team_that_needs_time(
+    home_score, away_score, home_timeouts, away_timeouts, delay
+):
+    state = {
+        "possession": "BUF",
+        "home_team": "BUF",
+        "home_score": home_score,
+        "away_score": away_score,
+        "home_timeouts": home_timeouts,
+        "away_timeouts": away_timeouts,
+    }
+    assert headline_delay(state) == delay
+
+
+def test_the_away_offense_is_read_from_its_own_timeouts():
+    state = {
+        "possession": "ARI",
+        "home_team": "BUF",
+        "home_score": 17,
+        "away_score": 10,
+        "home_timeouts": 3,
+        "away_timeouts": 0,
+    }
+    assert headline_delay(state) == HURRY_DELAY
+    assert headline_delay(state | {"home_score": 3, "home_timeouts": 0}) == RUNOUT_DELAY
+
+
+def test_outside_two_minutes_keeps_the_common_clock_headline(comparison, scorer):
+    r = late_row(comparison, 165)
+    result = evaluate_row(r, after(r, 150), comparison.before.second_half_receiver, scorer)
+    assert result["enforcement_wp_basis"] == "common_clock"
+    assert result["enforcement_wp_range"] is None
+
+
+def test_unknown_restart_stays_a_range_not_a_headline(comparison, scorer):
+    r = source_row(
+        comparison,
+        qtr=4,
+        half_seconds_remaining=100,
+        game_seconds_remaining=100,
+        penalty=1,
+        play_type="no_play",
+        desc="PENALTY on ARI-1-P, Encroachment, 5 yards, enforced at BUF 40 - No Play.",
+    )
+    following = r | {"yardline_100": 55, "ydstogo": 5}
+    result = evaluate_row(r, following, comparison.before.second_half_receiver, scorer)
+    assert result["enforcement_wp_basis"] == "common_clock"
+    assert result["enforcement_wp_range"] is not None
+
+
+def test_coverage_does_not_count_declined_zeros_as_measured(comparison, scorer):
+    declined = source_row(comparison)
+    following = declined | {"down": 1, "ydstogo": 10, "yardline_100": 40}
+    unknown = source_row(comparison, desc="Pass for 12 yards. The penalty was assisted by replay.")
+    events = [
+        evaluate_row(declined, following, comparison.before.second_half_receiver, scorer),
+        evaluate_row(unknown, None, comparison.before.second_half_receiver, scorer),
+    ]
+    assert events[0]["enforcement_epa"] == 0
+    result = coverage(events)
+    assert result["took_effect"] == 1 and result["valued_enforcement"] == 0
+    assert result["unpriced"] == 1
+    assert result["unpriced_by_reason"] == {"foul_not_identified": 1}
 
 
 def test_unclassified_penalty_mention_is_retained(comparison):

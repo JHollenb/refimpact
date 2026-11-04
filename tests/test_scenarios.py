@@ -195,6 +195,92 @@ def test_every_play_with_a_state_is_prefilled_from_what_came_next(rows):
     assert by_id["2028"]["default"]["qtr"] == 2
 
 
+def test_chart_at_the_edit_compares_the_same_moment_as_the_card(rows, scorer):
+    # The chart used to read the pre-snap line against the post-play alternate: 7.08 vs 8.44 pp.
+    result = run(rows, scorer, OPI)
+    edit, mark = result["edits"][0], point(result, "2895")
+    assert mark["status"] == "edit"
+    assert 100 * (mark["alternate_home_wp"] - mark["actual_home_wp"]) == pytest.approx(
+        edit["wp_swing_pp"], abs=1e-6
+    )
+    assert mark["actual_home_wp_before"] != mark["actual_home_wp"]
+
+
+def test_vegas_model_is_shown_beside_the_ledger_model(rows, scorer):
+    edit = run(rows, scorer, OPI)["edits"][0]
+    assert edit["actual"]["home_wp_vegas"] != edit["actual"]["home_wp"]
+    assert edit["wp_vegas_swing_pp"] == pytest.approx(
+        100 * (edit["alternate"]["home_wp_vegas"] - edit["actual"]["home_wp_vegas"])
+    )
+
+
+def test_opportunity_counts_downs_in_hand_and_next_score_chances(rows, scorer):
+    edit = run(rows, scorer, OPI)["edits"][0]
+    o = edit["opportunity"]
+    assert o["team"] == "SEA" and o["states"]["recorded"]["down"] == 2
+    assert o["states"]["yours"]["downs_available"] == 4
+    assert o["downs_gained"] == 1
+    assert o["states"]["yours"]["td"] > o["states"]["recorded"]["td"]
+    assert o["fg_change_pp"] < 0
+    state = o["states"]["yours"]
+    assert state["td"] + state["fg"] + state["no_score"] + state["other"] == pytest.approx(1)
+    assert "plays" not in str(o).lower()
+
+
+def test_drive_result_on_a_final_play_warns_and_can_name_the_team(rows, scorer):
+    # On a punt the recorded next state belongs to the team that received it (2026_08_CLE_PIT:239).
+    source = sorted(rows, key=lambda r: r["order_sequence"])
+    final = next(
+        r
+        for i, r in enumerate(source[:-1])
+        if r["play_type"] == "punt"
+        and r["qtr"] <= 2
+        and source[i + 1]["posteam"] not in {None, r["posteam"]}
+    )
+    edit = {"play_id": str(final["play_id"]), "drive_result": "td_xp"}
+    unset = run(rows, scorer, edit)["edits"][0]
+    assert unset["drive_team"] != final["posteam"]
+    assert any("has the ball next" in w for w in unset["warnings"])
+    named = run(rows, scorer, edit | {"drive_team": final["posteam"]})["edits"][0]
+    assert named["drive_team"] == final["posteam"] and not named["warnings"]
+    side = "home" if final["posteam"] == "SEA" else "away"
+    assert named["alternate_drive_end_score"][side] == named["alternate"]["state"][
+        f"{side}_score"
+    ] + 7
+    with pytest.raises(ValueError, match="not in this game"):
+        run(rows, scorer, edit | {"drive_team": "GB"})
+
+
+def test_play_with_no_later_snap_says_the_fields_are_pre_play(rows, scorer):
+    plays = scenario_plays(rows)["plays"]
+    last_half = [p for p in plays if p["qtr"] == 4][-1]
+    assert last_half["default_is_pre_play"]
+    assert not next(p for p in plays if p["play_id"] == "2895")["default_is_pre_play"]
+    warnings = run(rows, scorer, {"play_id": last_half["play_id"]})["edits"][0]["warnings"]
+    assert any("own pre-snap state" in w for w in warnings)
+
+
+def test_decided_alternate_ends_at_its_result_in_an_overtime_game(rows, scorer):
+    overtime = copy.deepcopy(rows)
+    end = next(r for r in overtime if r["desc"] == "END GAME")
+    overtime.remove(end)
+    snap = next(r for r in overtime if str(r["play_id"]) == "4224") | {
+        "play_id": "5000",
+        "order_sequence": 5000,
+        "qtr": 5,
+        "total_home_score": 41,
+    }
+    overtime += [
+        snap,
+        end | {"play_id": "5001", "order_sequence": 5001, "qtr": 5, "total_home_score": 41},
+    ]
+    result = run(overtime, scorer, OPI | {"changes": {"home_score": 40}, "drive_result": "none"})
+    assert result["final"]["alternate"]["result"] == "home_win"
+    assert point(result, "5001")["alternate_home_wp"] == 1.0
+    assert result["final"]["actual_regulation"] == {"home": 17, "away": 34}
+    assert result["final"]["actual"]["home"] == 41
+
+
 def test_blank_state_reads_without_a_game(scorer):
     state = State(
         season=2026, home_team="SEA", away_team="CHI", possession="SEA", home_score=0,
@@ -217,7 +303,7 @@ def test_dispute_report_marks_values_that_depend_on_earlier_edits(rows, scorer):
     assert [c["stacked"] for c in calls] == [False, True]
 
 
-def test_dispute_report_gives_a_range_and_counts_each_play_once():
+def test_dispute_report_sums_expected_points_without_claiming_a_margin_and_counts_plays_once():
     def saved(when, play, points, disputed=True):
         return {
             "scenario_id": when, "label": play, "kind": "flag", "source_url": "https://x.test/a",
@@ -235,8 +321,9 @@ def test_dispute_report_gives_a_range_and_counts_each_play_once():
     records.append(saved("4", "683", 50.0, disputed=False))
     report = disputed_report(records, GAME, "s")
     assert [c["play_id"] for c in report["calls"]] == ["108", "2895"]
-    assert report["home_points_if_all_wrong"] == 7.0
-    assert report["actual_home_margin"] == -17 and report["home_margin_if_all_wrong"] == -10
+    assert report["home_sum_at_moment_expected_points"] == 7.0
+    assert not any("margin" in key for key in report)
+    assert "not a final margin" in report["note"]
     assert not report["calls"][0]["stale"]
     assert not report["calls"][0]["stacked"]
     assert disputed_report(records, GAME, "newer")["calls"][0]["stale"]
@@ -314,8 +401,7 @@ def test_api_save_list_report_delete(local):
     assert local.get(f"/api/v1/scenarios/{scenario_id}").json()["label"] == "Smith-Njigba OPI"
     report = local.get("/api/v1/scenarios/disputes", params={"game_id": GAME}).json()
     assert report["calls"][0]["source_url"] == SAVE["source_url"]
-    assert report["actual_home_margin"] == -17
-    assert report["home_margin_if_all_wrong"] == pytest.approx(-14.1, abs=0.1)
+    assert report["home_sum_at_moment_expected_points"] == pytest.approx(2.9, abs=0.1)
     assert local.delete(f"/api/v1/scenarios/{scenario_id}").status_code == 204
     assert local.get(f"/api/v1/scenarios/{scenario_id}").status_code == 404
     assert local.delete(f"/api/v1/scenarios/{scenario_id}").status_code == 404

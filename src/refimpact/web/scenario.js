@@ -4,7 +4,7 @@
 // plays as played to draw an alternate timeline. All math stays on the server.
 const whatIf = {game:null,home:null,away:null,plays:[],context:null,edits:[],current:null,result:null,request:0};
 const DRIVE_RESULTS = {td_xp:"TD + XP (7)",td_2pt:"TD + 2-pt (8)",fg:"Field goal (3)",none:"No score"};
-const pct = (p) => p == null ? "—" : `${(p * 100).toFixed(1)}%`;
+const pct = (p) => p == null ? "—" : `${(p * 100).toFixed(0)}%`;
 const clockText = (seconds) => `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2,"0")}`;
 const whatIfTeam = () => $("#history-team")?.value || whatIf.home;
 const forTeam = (value) => value == null ? null : whatIfTeam() === whatIf.home ? value : 1 - value;
@@ -77,8 +77,8 @@ function renderForm() {
     <label>${escapeHTML(whatIf.home)} score <input data-field="home_score" type="number" min="0" value="${s.home_score}"></label>
     <label>${escapeHTML(whatIf.away)} timeouts <select data-field="away_timeouts">${counts(s.away_timeouts)}</select></label>
     <label>${escapeHTML(whatIf.home)} timeouts <select data-field="home_timeouts">${counts(s.home_timeouts)}</select></label>
-    ${c.blank?"":`<label>Drive ends <select data-field="drive_result"><option value="">Moment only</option>${Object.entries(DRIVE_RESULTS).map(([k,v]) => fieldOption(k,v,c.drive_result)).join("")}</select></label>`}
-  </div>${c.blank?"":`<div class="whatif-actions"><button class="whatif-button" id="whatif-add">Add and edit another play</button><button class="whatif-button quiet" id="whatif-reset">Reset fields</button></div>`}`;
+    ${c.blank?"":`<label>Drive ends <select data-field="drive_result"><option value="">Moment only</option>${Object.entries(DRIVE_RESULTS).map(([k,v]) => fieldOption(k,v,c.drive_result)).join("")}</select></label><label>Result goes to <select data-field="drive_team"><option value="">Team with the ball</option>${team(c.drive_team)}</select></label>`}
+  </div>${c.pre_play?'<p class="clock-note">No later snap in this half, so these fields start at this play\'s own pre-snap state.</p>':""}${c.blank?"":`<div class="whatif-actions"><button class="whatif-button" id="whatif-add">Add and edit another play</button><button class="whatif-button quiet" id="whatif-reset">Reset fields</button></div>`}`;
 }
 function readForm() {
   const value = (name) => $(`#whatif-form [data-field="${name}"]`)?.value;
@@ -110,8 +110,9 @@ async function scoreWhatIf() {
     const edits = whatIf.edits.filter(e => e.play_id !== c?.play_id);
     if (c) {
       c.drive_result = $(`#whatif-form [data-field="drive_result"]`)?.value || null;
+      c.drive_team = $(`#whatif-form [data-field="drive_team"]`)?.value || null;
       c.changes = changesFrom(readForm(),c.shown);
-      edits.push({play_id:c.play_id,changes:c.changes,drive_result:c.drive_result});
+      edits.push({play_id:c.play_id,changes:c.changes,drive_result:c.drive_result,...(c.drive_result&&c.drive_team?{drive_team:c.drive_team}:{})});
     }
     if (!edits.length) { whatIf.result=null;$("#whatif-result").innerHTML="";renderStack();renderSaveForm();return; }
     const result = await sendJSON("/api/v1/scenarios/evaluate","POST",{game_id:whatIf.game,edits});
@@ -134,7 +135,8 @@ function selectWhatIfPlay(id) {
     const start = whatIf.result?.edits.find(e => e.play_id === id)?.actual.state;
     if (start) { shown.home_score = start.home_score;shown.away_score = start.away_score; }
   }
-  whatIf.current = {play_id:id,description:play.description,shown:{...shown,...(existing?.changes||{})},base:shown,drive_result:existing?.drive_result||null};
+  // A drive result belongs to the team that ran this play unless the user says otherwise.
+  whatIf.current = {play_id:id,description:play.description,shown:{...shown,...(existing?.changes||{})},base:shown,drive_result:existing?.drive_result||null,drive_team:existing?.drive_team||null,pre_play:play.default_is_pre_play};
   const c = whatIf.current;
   renderForm();
   c.shown = c.base;
@@ -159,14 +161,15 @@ function renderScenario() {
   const r = whatIf.result;if(!r)return;
   const team = whatIfTeam(), focus = r.edits.find(e => e.play_id === whatIf.current?.play_id) || r.edits[r.edits.length-1];
   const alt = forTeam(focus.alternate.home_wp), act = forTeam(focus.actual.home_wp), swing = swingFor(focus.wp_swing_pp), points = swingFor(focus.points_swing), next = swingFor(focus.aftermath_pp);
-  const finalAlt = r.final.alternate, finalAct = r.final.actual;
+  const finalAlt = r.final.alternate, finalAct = r.final.actual, regulation = r.final.actual_regulation;
+  const vegas = swingFor(focus.wp_vegas_swing_pp);
   const outcome = !finalAlt ? "" : finalAlt.result==="tie_ot_not_modeled" ? "Tied; OT not modeled" : finalAlt.result==="home_win" ? `${whatIf.home} would finish ahead` : finalAlt.result==="away_win" ? `${whatIf.away} would finish ahead` : "Game not final";
   $("#whatif-result").innerHTML = `<div class="whatif-cards">
-    <div class="whatif-card"><span class="mini-label">${escapeHTML(team)} WIN CHANCE AT THAT MOMENT</span><strong>${pct(act)} → ${pct(alt)}</strong><p class="${colorClass(swing)}">${signed(swing,1)} pp · ${signed(points)} points</p></div>
+    <div class="whatif-card"><span class="mini-label">${escapeHTML(team)} WIN CHANCE AT THAT MOMENT</span><strong>${pct(act)} → ${pct(alt)}</strong><p class="${colorClass(swing)}">${swingPP(swing)} · ${signed(points)} expected points, ignores score</p>${vegas==null?"":`<p class="muted">Vegas model: ${wholePP(vegas)}</p>`}</div>
     <div class="whatif-card"><span class="mini-label">RECORDED NEXT</span><p>${escapeHTML(stateText(focus.actual.state))}</p><span class="mini-label">YOUR VERSION</span><p>${escapeHTML(stateText(focus.alternate.state))}</p></div>
-    ${next==null?"":`<div class="whatif-card"><span class="mini-label">WHAT THE REAL GAME DID NEXT</span><strong class="${colorClass(next)}">${signed(next,1)} pp</strong><p>To the end of that drive, from the recorded state. Separate from the call.</p></div>`}
-    ${finalAlt?`<div class="whatif-card"><span class="mini-label">FINAL · LATER PLAYS HELD AS PLAYED</span><strong>${escapeHTML(whatIf.away)} ${finalAlt.away}–${escapeHTML(whatIf.home)} ${finalAlt.home}</strong><p>Actual: ${escapeHTML(whatIf.away)} ${finalAct.away}–${escapeHTML(whatIf.home)} ${finalAct.home}. ${escapeHTML(outcome)}.</p></div>`:`<div class="whatif-card"><span class="mini-label">NEXT STEP</span><p>Choose how this drive ends to draw the alternate timeline.</p></div>`}
-  </div><div id="whatif-chart" class="whatif-chart"></div><p class="footnote">${escapeHTML(r.note)} ${r.parity.max_abs_wp_error==null?"":r.parity.max_abs_wp_error<0.00001?`Without edits, the model matches the published win chance within 0.001 pp across ${r.parity.rows} recorded snaps.`:`Warning: without edits, the model differs from the published win chance by up to ${(r.parity.max_abs_wp_error*100).toFixed(2)} pp.`}</p>`;
+    ${next==null?"":`<div class="whatif-card"><span class="mini-label">WHAT THE REAL GAME DID NEXT</span><strong class="${colorClass(next)}">${wholePP(next)}</strong><p>To the end of that drive, from the recorded state. Separate from the call.</p></div>`}
+    ${finalAlt?`<div class="whatif-card"><span class="mini-label">FINAL · LATER PLAYS HELD AS PLAYED</span><strong>${escapeHTML(whatIf.away)} ${finalAlt.away}–${escapeHTML(whatIf.home)} ${finalAlt.home}</strong><p>Actual: ${escapeHTML(whatIf.away)} ${finalAct.away}–${escapeHTML(whatIf.home)} ${finalAct.home}${regulation?` after overtime; ${escapeHTML(whatIf.away)} ${regulation.away}–${escapeHTML(whatIf.home)} ${regulation.home} at the end of regulation, which is what the alternate compares with`:""}. ${escapeHTML(outcome)}.</p></div>`:`<div class="whatif-card"><span class="mini-label">NEXT STEP</span><p>Choose how this drive ends to draw the alternate timeline.</p></div>`}
+  </div>${(focus.warnings||[]).map(w => `<p class="clock-note">${escapeHTML(w)}</p>`).join("")}${opportunityPanel(focus.opportunity)}<div id="whatif-chart" class="whatif-chart"></div><p class="footnote">${escapeHTML(r.note)} ${r.parity.max_abs_wp_error==null?"":r.parity.max_abs_wp_error<0.00001?`Without edits, the model matches the published win chance within 0.001 pp across ${r.parity.rows} recorded snaps.`:`Warning: without edits, the model differs from the published win chance by up to ${(r.parity.max_abs_wp_error*100).toFixed(2)} pp.`}</p>`;
   drawWhatIfChart();
 }
 function drawWhatIfChart() {
@@ -205,8 +208,7 @@ async function loadSaved() {
     const [saved,report] = await Promise.all([get(`/api/v1/scenarios?game_id=${encodeURIComponent(whatIf.game)}`),get(`/api/v1/scenarios/disputes?game_id=${encodeURIComponent(whatIf.game)}`)]);
     if (!$("#whatif-saved")) return;
     const signedFor = (v,digits) => signed(swingFor(v),digits);
-    const margin = (m) => m==null?"—":m===0?"tied":`${m>0?whatIf.home:whatIf.away} by ${Math.abs(m).toFixed(1).replace(/\.0$/,"")}`;
-    const disputed = report.calls.length ? `<section class="whatif-report"><h4>Disputed calls</h4><div class="table-wrap"><table><thead><tr><th>CALL</th><th>WHEN</th><th>${escapeHTML(whatIfTeam())} WIN CHANCE</th><th>POINTS</th><th>SOURCE</th></tr></thead><tbody>${report.calls.map(c => `<tr><td>${escapeHTML(c.label)}${c.stale?' <span class="muted">(older data)</span>':""}${c.stacked?' <span class="muted">(valued after earlier edits)</span>':""}</td><td>Q${c.qtr} ${escapeHTML(c.time||"")}</td><td>${signedFor(c.wp_swing_pp,1)} pp</td><td>${signedFor(c.points_swing)}</td><td>${c.source_url?`<a class="text-link" href="${escapeHTML(c.source_url)}" target="_blank" rel="noopener">link</a>`:""}</td></tr>`).join("")}</tbody></table></div><p><strong>If none were wrong: ${margin(report.actual_home_margin)}. If all were wrong: ${margin(report.home_margin_if_all_wrong)}.</strong></p><p class="footnote">${escapeHTML(report.note)}</p></section>` : "";
+    const disputed = report.calls.length ? `<section class="whatif-report"><h4>Disputed calls</h4><div class="table-wrap"><table><thead><tr><th>CALL</th><th>WHEN</th><th>${escapeHTML(whatIfTeam())} WIN CHANCE</th><th>POINTS</th><th>SOURCE</th></tr></thead><tbody>${report.calls.map(c => `<tr><td>${escapeHTML(c.label)}${c.stale?' <span class="muted">(older data)</span>':""}${c.stacked?' <span class="muted">(valued after earlier edits)</span>':""}</td><td>Q${c.qtr} ${escapeHTML(c.time||"")}</td><td>${swingPP(swingFor(c.wp_swing_pp))}</td><td>${signedFor(c.points_swing)}</td><td>${c.source_url?`<a class="text-link" href="${escapeHTML(c.source_url)}" target="_blank" rel="noopener">link</a>`:""}</td></tr>`).join("")}</tbody></table></div><p><strong>Sum of at-the-moment expected points · ${escapeHTML(whatIfTeam())}: ${signedFor(report.home_sum_at_moment_expected_points)}.</strong></p><p class="footnote">${escapeHTML(report.note)}</p></section>` : "";
     $("#whatif-saved").innerHTML = disputed + (saved.scenarios.length ? `<section class="whatif-report"><h4>Saved scenarios</h4>${saved.scenarios.map(s => `<div class="whatif-saved-row"><button class="text-link" data-whatif-load="${escapeHTML(s.scenario_id)}">${escapeHTML(s.label)}</button><span class="muted">${escapeHTML(s.kind.replace("_","-"))}${s.disputed?" · disputed":""}</span><button class="whatif-chip-x" data-whatif-delete="${escapeHTML(s.scenario_id)}" aria-label="Delete ${escapeHTML(s.label)}">×</button></div>`).join("")}</section>` : "");
   } catch (e) {
     showWhatIfError(e.message);

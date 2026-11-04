@@ -9,13 +9,37 @@ from datetime import UTC, date, datetime
 import polars as pl
 
 from refimpact.models import MODEL_ID, Scorer
-from refimpact.penalties import coverage
+from refimpact.penalties import coverage, took_effect
 from refimpact.replay import derive_week
 
 SCHEDULE_URL = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv"
+LARGE_SWING_PP = 5
 PBP_URL = (
     "https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_{season}.parquet"
 )
+
+
+def swing_summary(events: list[dict]) -> dict:
+    """The per-flag win-chance view: largest swings first, in pp at the moment of each flag."""
+    priced = [e for e in events if took_effect(e) and e["home_wp_swing_pp"] is not None]
+    priced.sort(key=lambda e: abs(e["home_wp_swing_pp"]), reverse=True)
+    return {
+        "swings_over_5pp": sum(abs(e["home_wp_swing_pp"]) >= LARGE_SWING_PP for e in priced),
+        "top_swings": [
+            {
+                "id": e["id"],
+                "qtr": e["qtr"],
+                "time": e["time"],
+                "ruling": " + ".join(f["type"] for f in e["fouls"]),
+                "home_wp_swing_pp": e["home_wp_swing_pp"],
+                "home_wp_vegas_swing_pp": e["home_wp_vegas_swing_pp"],
+                "basis": e["enforcement_wp_basis"],
+                "delay_seconds": (e["enforcement_wp_restarts"] or {}).get("delay_seconds"),
+                "approximate": bool(e["approximate"]),
+            }
+            for e in priced[:3]
+        ],
+    }
 
 
 def select_current(games: list[dict], as_of: date) -> tuple[int, int]:
@@ -83,6 +107,7 @@ def build_catalog(
         calls = calls_by_game[game_id]
         events = penalties_by_game[game_id]
         measured = [e["home_epa_impact"] for e in events if e["home_epa_impact"] is not None]
+        effective = [e for e in events if took_effect(e)]
         team_production = production.get(game_id, {})
         home_production = team_production.get(row["home_team"], {})
         away_production = team_production.get(row["away_team"], {})
@@ -127,7 +152,10 @@ def build_catalog(
                 "pbp_available": game_id in available_ids,
                 "pbp_complete": game_id in ended,
                 "scored_calls": len(calls),
-                "valued_penalties": len(measured),
+                "valued_penalties": sum(e["enforcement_epa"] is not None for e in effective),
+                "unpriced_penalties": sum(e["enforcement_epa"] is None for e in effective),
+                "declined_penalties": len(events) - len(effective),
+                **swing_summary(events),
                 "penalty_coverage": coverage(events),
                 "production": team_production,
                 "penalty_benefit": progression.get(game_id, {}).get("penalty_benefit"),

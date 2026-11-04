@@ -8,11 +8,17 @@ from __future__ import annotations
 
 import math
 import re
-from collections import Counter
+from collections import Counter, defaultdict
 
 import polars as pl
 
-from refimpact.decisions import Clock, DecisionBranch, DecisionRequest, evaluate_decision
+from refimpact.decisions import (
+    Clock,
+    DecisionBranch,
+    DecisionRequest,
+    evaluate_decision,
+    opportunity,
+)
 from refimpact.models import Scorer
 from refimpact.replay import second_half_receivers, state_from_row
 from refimpact.schema import State
@@ -32,6 +38,21 @@ PREVIOUS = {
     "Ineligible Downfield Pass": (5, False, False),
     "Offensive Offside": (5, False, False),
 }
+# Kick-rule placements: the feed has no foul-free result to compare with.
+KICK_PLACEMENT = {"Kickoff Out of Bounds", "Kickoff Short of Landing Zone", "Illegal Touch Kick"}
+# A spot with no team is midfield ("to 50"). Group 1 is the team, group 2 the yard.
+RETURN_END = re.compile(
+    r"\b(?:to|ran ob at|pushed ob at|out of bounds at)\s+(?:([A-Z]{2,3}) )?(\d{1,2}) "
+    r"for (?:-?\d+ yards?|no gain)"
+)
+RECOVERY = re.compile(r"(?i:recovered by) ([A-Z]{2,3})-\S+ at (?:([A-Z]{2,3}) )?(\d{1,2})")
+SELF_RECOVERY = re.compile(r"and recovers at (?:([A-Z]{2,3}) )?(\d{1,2})")
+# Inside two minutes a next-snap wait is often the point of the flag. A declared scenario length,
+# used only when the feed and Rule 4 give both branches a known restart.
+LATE_SECONDS = 120
+HURRY_DELAY = 10
+RUNOUT_DELAY = 20
+CLOCK_RUNS = {"running", "ready"}
 
 
 def finite(value) -> bool:
@@ -143,11 +164,111 @@ def advance(
     return changed(before, yardline_100=yardline, down=down, ydstogo=togo)
 
 
-def play_result(before: State, row: dict, prefix: str) -> State:
-    if re.search(r"TOUCHDOWN|SAFETY|FUMBLE|field goal|punts|kicks", prefix, re.I):
-        raise ValueError(
-            "Scoring, turnover or kicking alternative needs additional outcome evidence"
-        )
+def opponent(s: State, team: str) -> str:
+    return s.away_team if team == s.home_team else s.home_team
+
+
+def yard_from(defense: str, team: str | None, yard: str) -> float:
+    """A written spot as distance to `defense`'s goal line."""
+    return float(yard) if team in {defense, None} else 100 - float(yard)
+
+
+def after_score(before: State, team: str, points: int, kick_spot: float | None) -> State:
+    """The state a score hands over: points on the board, opponent ball after the kick."""
+    if kick_spot is None:
+        raise ValueError("Scoring alternative needs a measured post-kick start spot")
+    key = "home_score" if team == before.home_team else "away_score"
+    return changed(
+        before,
+        **{key: getattr(before, key) + points},
+        possession=opponent(before, team),
+        yardline_100=kick_spot,
+        down=1,
+        ydstogo=min(10, kick_spot),
+    )
+
+
+def touchdown_team(before: State, prefix: str) -> str:
+    if len(re.findall(r"FUMBLES|INTERCEPTED|MUFFS|BLOCKED", prefix)) > 1 or "BLOCKED" in prefix:
+        raise ValueError("Touchdown after a block or several turnovers is ambiguous; not guessed")
+    recovered = re.findall(r"(?i:recovered by) ([A-Z]{2,3})-", prefix)
+    if recovered:
+        return recovered[-1]
+    if re.search(r"INTERCEPTED|punts", prefix):
+        return opponent(before, before.possession)
+    return before.possession
+
+
+def punt_result(before: State, prefix: str) -> State:
+    if re.search(r"MUFFS|BLOCKED|FUMBLES|Lateral", prefix):
+        raise ValueError("Punt with a muff, block, fumble or lateral is ambiguous; not guessed")
+    other = opponent(before, before.possession)
+    tail = prefix[re.search(r"\bpunts\b", prefix).start() :]
+    if "Touchback" in tail:
+        return advance(before, 20, consumed=True, possession=other)
+    returned = RETURN_END.findall(tail)
+    if len(returned) > 1:
+        raise ValueError("Punt return endpoint is ambiguous; not guessed")
+    spot = returned[0] if returned else None
+    if spot is None:
+        target = re.search(r"punts -?\d+ yards? to (?:([A-Z]{2,3}) )?(\d{1,2})\b", tail)
+        spot = target.groups() if target else None
+    if spot is None:
+        raise ValueError("Punt result is not recoverable from the description")
+    yard = yard_from(other, spot[0] or None, spot[1])
+    return advance(before, yard, consumed=True, possession=other)
+
+
+def fumble_result(before: State, prefix: str) -> State:
+    recoveries = RECOVERY.findall(prefix)
+    own = SELF_RECOVERY.findall(prefix)
+    if (
+        len(re.findall(r"FUMBLES", prefix)) != 1
+        or len(recoveries) + len(own) != 1
+        or re.search(r"Lateral|INTERCEPT|MUFFS", prefix)
+    ):
+        raise ValueError("Fumble recovery is not a single unambiguous sequence; not guessed")
+    other = opponent(before, before.possession)
+    team = recoveries[0][0] if recoveries else before.possession
+    spot = recoveries[0][1:] if recoveries else own[0]
+    # A return after the recovery ends the play; a gain before the fumble does not.
+    tail = prefix[(RECOVERY.search(prefix) or SELF_RECOVERY.search(prefix)).end() :]
+    returned = RETURN_END.findall(tail)
+    if len(returned) > 1:
+        raise ValueError("Fumble return endpoint is ambiguous; not guessed")
+    if returned:
+        spot = returned[0]
+    yard = yard_from(other, spot[0] or None, spot[1])
+    return (
+        advance(before, yard, consumed=True)
+        if team == before.possession
+        else advance(before, yard, consumed=True, possession=other)
+    )
+
+
+def play_result(before: State, row: dict, prefix: str, kick_spot: float | None = None) -> State:
+    if re.search(r"SAFETY", prefix):
+        raise ValueError("Safety alternative needs a free-kick spot; not guessed")
+    if re.search(r"TOUCHDOWN", prefix):
+        return after_score(before, touchdown_team(before, prefix), 7, kick_spot)
+    if re.search(r"\bfield goal is\b", prefix):
+        if re.search(r"field goal is GOOD", prefix):
+            return after_score(before, before.possession, 3, kick_spot)
+        if re.search(r"field goal is No Good", prefix):
+            # Rule 11-4: spot of the kick, eight yards behind the line, or the 20 if farther out.
+            return advance(
+                before,
+                max(20.0, before.yardline_100 + 8),
+                consumed=True,
+                possession=opponent(before, before.possession),
+            )
+        raise ValueError("Blocked or unusual field goal result is not guessed")
+    if re.search(r"\bpunts\b", prefix):
+        return punt_result(before, prefix)
+    if re.search(r"\bkicks\b", prefix):
+        raise ValueError("Free-kick alternative from a scrimmage row is not guessed")
+    if re.search(r"FUMBLES", prefix):
+        return fumble_result(before, prefix)
     if re.search(r"INTERCEPT", prefix, re.I):
         if len(re.findall(r"INTERCEPTED", prefix, re.I)) != 1 or re.search(
             r"lateral", prefix, re.I
@@ -160,11 +281,10 @@ def play_result(before: State, row: dict, prefix: str) -> State:
             return advance(before, 20, consumed=True, possession=other)
         # Require an explicit return endpoint, not just the interception location.
         tail = re.split(r"INTERCEPTED", prefix, flags=re.I)[-1]
-        endpoints = re.findall(r"\bto ([A-Z]{2,3}) (\d+) for (?:-?\d+ yards?|no gain)", tail)
+        endpoints = RETURN_END.findall(tail)
         endpoint = endpoints[0] if len(endpoints) == 1 else None
-        if endpoint and endpoint[0] in {before.home_team, before.away_team}:
-            yard = float(endpoint[1])
-            original_coordinate = yard if endpoint[0] == other else 100 - yard
+        if endpoint and endpoint[0] in {before.home_team, before.away_team, ""}:
+            original_coordinate = yard_from(other, endpoint[0] or None, endpoint[1])
             return advance(before, original_coordinate, consumed=True, possession=other)
         raise ValueError("Interception return endpoint is not recoverable from the description")
     if re.search(r"pass incomplete", prefix, re.I):
@@ -191,8 +311,10 @@ def noflag_restart(prefix: str, before: State, dead: bool) -> str:
         return "unknown"
     if dead:
         return "unknown"
-    if re.search(r"INTERCEPT", prefix, re.I):
-        return "snap"  # A change of possession stops the game clock.
+    if re.search(r"INTERCEPT|TOUCHDOWN|field goal is|\bpunts\b", prefix, re.I):
+        return "snap"  # A score or change of possession stops the game clock.
+    if re.search(r"FUMBLES", prefix):
+        return "unknown"  # Depends on who recovered and where the ball went.
     if re.search(r"incomplete", prefix, re.I):
         return "snap"
     if re.search(r"(?:ran|pushed|runs) ob|out of bounds", prefix, re.I):
@@ -325,13 +447,13 @@ def nullified_record(row: dict, prefix: str, disposition: str) -> dict | None:
     }
 
 
-def written_erased_branch(base: State, prefix: str) -> DecisionBranch:
+def written_erased_branch(
+    base: State, prefix: str, kick_spot: float | None = None
+) -> DecisionBranch:
     # Disable the usual structured-yards fallback. nflverse commonly sets those
     # fields to zero precisely because the physical action was nullified.
     written = re.sub(r"for a loss of (\d+) yards?", r"for -\1 yards", prefix, flags=re.I)
-    if len(re.findall(r"for -?\d+ yards?\b", written, re.I)) > 1:
-        raise ValueError("Multiple written gains need an unambiguous net result; not guessed")
-    result = play_result(base, {"play_type": "no_play"}, written)
+    result = play_result(base, {"play_type": "no_play"}, written, kick_spot)
     return make_branch(
         "erased_result",
         "IF the written nullified action counted",
@@ -352,12 +474,287 @@ def written_erased_branch(base: State, prefix: str) -> DecisionBranch:
     )
 
 
+def score_stands(prefix: str, description: str) -> bool:
+    """A written score that counted: enforcement moved to the try or kickoff, not the play."""
+    return (
+        bool(re.search(r"TOUCHDOWN|field goal is GOOD", prefix))
+        and "NULLIFIED" not in prefix
+        and "No Play" not in description
+    )
+
+
+def approximation(prefix: str, kick_spot: float | None) -> str | None:
+    """Plain statement of what a scoring or kick alternative assumes beyond the written text."""
+    if re.search(r"TOUCHDOWN", prefix):
+        return (
+            f"Approximate: erased touchdown counted as 7 with the extra point assumed good, then "
+            f"the opponent's ball {kick_spot:g} yards from goal (season mean after kickoffs), "
+            "at the same clock."
+        )
+    if re.search(r"field goal is GOOD", prefix):
+        return (
+            f"Approximate: erased field goal counted as 3, then the opponent's ball {kick_spot:g} "
+            "yards from goal (season mean after kickoffs), at the same clock."
+        )
+    if re.search(r"field goal is No Good", prefix):
+        return "Approximate: missed kick gives the opponent the spot of the kick or its own 20."
+    if re.search(r"FUMBLES", prefix):
+        return "Approximate: possession and spot read from the written recovery and return."
+    return None
+
+
+def unpriced_reason(row: dict, event: dict, prefix: str) -> str | None:
+    """Why a flag that took effect has no enforcement value; None if it has one or was declined."""
+    if event["enforcement_epa"] is not None or event["disposition"] in {"declined", "rescinded"}:
+        return None
+    text = row.get("desc") or ""
+    if not finite(row.get("qtr")) or row["qtr"] > 4:
+        return "overtime_not_modeled"
+    if any("measured post-kick" in issue for issue in event["issues"]):
+        return "no_measured_kick_spot"
+    if re.search(r"TWO-POINT CONVERSION|extra point", text) or (
+        "(Kick formation)" in text and row.get("down") is None
+    ):
+        return "try_not_modeled"
+    if any(f["type"] in KICK_PLACEMENT for f in event["fouls"]):
+        return "kick_rule_placement"
+    if score_stands(prefix, text):
+        return "score_stands_enforced_after"
+    if re.search(r"SAFETY", text):
+        return "safety"
+    if row.get("play_type") == "kickoff" or re.search(r"\bkicks\b", prefix):
+        return "kickoff_result_not_recoverable"
+    if re.search(r"\bpunts\b|field goal is", prefix):
+        return "kick_result_ambiguous"
+    if re.search(r"FUMBLES|INTERCEPT|TOUCHDOWN", prefix):
+        return "turnover_sequence_ambiguous"
+    if any(f["team"] is None or f["disposition"] == "unknown" for f in event["fouls"]):
+        return "foul_not_identified"
+    if not re.search(r"\bfor (?:-?\d|no gain|a loss)|incomplete|sacked|kneel|spike", prefix, re.I):
+        return "no_written_action"
+    return "other"
+
+
+def sensible_wait(case: dict, decision: dict) -> bool:
+    """Running out the half is a real outcome only for the team ahead, who wants it.
+
+    A team that is tied or behind would hurry or spike rather than wait out the declared delay,
+    so that scenario's 0% says nothing about the flag.
+    """
+    branches = {b["id"]: b for b in decision["branches"]}
+    for phase, name in (
+        (case["actual_phase"], decision["actual_branch"]),
+        (case["alternative_phase"], case["alternative_branch"]),
+    ):
+        state = branches[name]["base_state"]
+        margin = state["home_score"] - state["away_score"]
+        ahead = margin > 0 if state["possession"] == state["home_team"] else margin < 0
+        if phase != "scrimmage" and not ahead:
+            return False
+    return True
+
+
+def headline_delay(state: dict) -> int:
+    """Seconds lost before the next snap, set by the team that needs time.
+
+    That team is the offense when tied or behind, otherwise the defense. With a timeout left it
+    can stop the clock, so nothing is charged; the spent timeout itself is not priced.
+    """
+    margin = state["home_score"] - state["away_score"]
+    home_ball = state["possession"] == state["home_team"]
+    offense_needs_time = margin <= 0 if home_ball else margin >= 0
+    home_needs_time = home_ball == offense_needs_time
+    if state["home_timeouts" if home_needs_time else "away_timeouts"] > 0:
+        return 0
+    return HURRY_DELAY if offense_needs_time else RUNOUT_DELAY
+
+
+def restart_aware_case(cases: list[dict], decision: dict) -> dict | None:
+    """The known-restart comparison at the delay every running branch needs, if there is one."""
+    known = [c for c in cases if not c["conditional_clock_assumption"]]
+    if not known:
+        return None
+    branches = {b["id"]: b for b in decision["branches"]}
+    needed = set()
+    if known[0]["actual_restart"] in CLOCK_RUNS:
+        needed.add(headline_delay(branches[decision["actual_branch"]]["base_state"]))
+    if known[0]["alternative_restart"] in CLOCK_RUNS:
+        needed.add(headline_delay(branches[known[0]["alternative_branch"]]["base_state"]))
+    if len(needed) != 1:
+        return None
+    delay = needed.pop()
+    return next(
+        (c for c in known if c["next_snap_delay_seconds"] == delay and sensible_wait(c, decision)),
+        None,
+    )
+
+
+def late_clock(event: dict, decision: dict, half_seconds: float) -> None:
+    """Inside 2:00 report a range; lead with restart-aware only when the clock would really run."""
+    event.update(
+        enforcement_wp_common_clock_pp=event["enforcement_wp_swing_pp"],
+        enforcement_wp_vegas_common_clock_pp=event["enforcement_wp_vegas_pp"],
+        enforcement_wp_basis="common_clock",
+        enforcement_wp_range=None,
+    )
+    if half_seconds > LATE_SECONDS or event["enforcement_wp_swing_pp"] is None:
+        return
+    cases = [
+        c
+        for c in decision["timing_comparisons"]
+        if c["alternative_branch"] == "no_flag" and c["actual_minus_branch_wp_pp"] is not None
+    ]
+    sampled = [c["actual_minus_branch_wp_pp"] for c in cases if sensible_wait(c, decision)]
+    values = [event["enforcement_wp_swing_pp"], *sampled]
+    event["enforcement_wp_range"] = {
+        "min": min(values),
+        "max": max(values),
+        "meaning": "Across next-snap waits of 0, 10 and 20 seconds under each restart rule, "
+        "leaving out a team that is tied or behind waiting out the half; sampled scenarios, "
+        "not a confidence interval.",
+    }
+    known = restart_aware_case(cases, decision)
+    if known:
+        event["enforcement_wp_swing_pp"] = known["actual_minus_branch_wp_pp"]
+        event["enforcement_wp_vegas_pp"] = known["actual_minus_branch_wp_vegas_pp"]
+        event["enforcement_wp_basis"] = "restart_aware"
+        event["enforcement_wp_restarts"] = {
+            "actual": known["actual_restart"],
+            "alternative": known["alternative_restart"],
+            "delay_seconds": known["next_snap_delay_seconds"],
+        }
+
+
+def finish_decision(event: dict, decision: dict, before: State) -> None:
+    """Copy the no-flag comparison onto the event and orient its win-chance swing to home."""
+    event["decision"] = decision
+    nf = next((b for b in decision["branches"] if b["id"] == "no_flag"), None)
+    if nf:
+        event["enforcement_epa"] = nf["actual_minus_branch_epa"]
+        event["enforcement_wp_swing_pp"] = nf["actual_minus_branch_wp_pp"]
+        event["enforcement_wp_vegas_pp"] = nf["actual_minus_branch_wp_vegas_pp"]
+        late_clock(event, decision, before.half_seconds_remaining)
+        sign = 1 if decision["reference_team"] == before.home_team else -1
+        event["home_epa_impact"] = event["enforcement_epa"] * sign
+        for side, value in (
+            ("home_wp_swing_pp", event["enforcement_wp_swing_pp"]),
+            ("home_wp_vegas_swing_pp", event["enforcement_wp_vegas_pp"]),
+        ):
+            event[side] = value * sign if value is not None else None
+
+
+def kick_return_state(next_state: State, prefix: str, receiver: str, kick_spot) -> State:
+    """The written kickoff result, as the receiving team's first snap."""
+    if re.search(r"kicks onside|BLOCKED|FUMBLES|Lateral", prefix) or (
+        "MUFFS" in prefix and "and recovers" not in prefix
+    ):
+        raise ValueError("Kickoff with an onside kick, fumble or muff is ambiguous; not guessed")
+    if "TOUCHDOWN" in prefix:
+        return after_score(next_state, receiver, 7, kick_spot)
+    kicker = opponent(next_state, receiver)
+    tail = prefix[re.search(r"\bkicks\b", prefix).start() :]
+    touchback = re.search(r"Touchback to the ([A-Z]{2,3}) (\d{1,2})", tail)
+    returned = RETURN_END.findall(tail)
+    if touchback:
+        spot = touchback.groups()
+    elif returned:
+        spot = returned[-1]
+    else:
+        raise ValueError("Kickoff result is not recoverable from the description")
+    yards = yard_from(kicker, spot[0] or None, spot[1])
+    return changed(
+        next_state, possession=receiver, yardline_100=yards, down=1, ydstogo=min(10, yards)
+    )
+
+
+def evaluate_kickoff(
+    row: dict, event: dict, fouls: list[dict], prefix: str, following, receiver, scorer, kick_spot
+) -> None:
+    """A kickoff row has no scrimmage pre-state, so compare the two first snaps it can lead to.
+
+    The next recorded snap is the actual branch and supplies the clock and timeouts for both.
+    """
+    if not following or following.get("game_id") != row["game_id"]:
+        raise ValueError("No following scrimmage state for this kickoff")
+    if any(f["type"] in KICK_PLACEMENT for f in fouls):
+        raise ValueError("Kick-rule placement has no foul-free result in the feed")
+    if score_stands(prefix, row.get("desc") or ""):
+        raise ValueError("Return touchdown stands; enforcement falls on the try or next kick")
+    actual = state_from_row(following, receiver)
+    key = {row["posteam"]: "posteam_score", row["defteam"]: "defteam_score"}
+    if (actual.home_score, actual.away_score) != (
+        row[key[actual.home_team]],
+        row[key[actual.away_team]],
+    ) or (actual.qtr <= 2) != (row["qtr"] <= 2):
+        raise ValueError("Score or half changed before the next snap; not compared")
+    noflag = kick_return_state(actual, prefix, row["posteam"], kick_spot)
+    actual_id = "accept" if len(fouls) == 1 else "as_called"
+    note = approximation(prefix, kick_spot)
+    assumptions = [
+        "Compares the next recorded snap with the written kick result, both at that snap's clock "
+        "and timeouts. Rows without a scrimmage state have no earlier value to subtract.",
+        *([note] if note else []),
+    ]
+    branches = [
+        make_branch(
+            "no_flag",
+            "No flag; keep the written kick result",
+            noflag,
+            restart="snap",
+            assumptions=assumptions,
+        ),
+        make_branch(
+            actual_id,
+            "Observed snap after enforcement",
+            actual,
+            restart="snap",
+            evidence="observed",
+            assumptions=assumptions,
+        ),
+    ]
+    decision = evaluate_decision(
+        DecisionRequest(
+            reference_team=row["posteam"],
+            before=noflag,
+            actual_branch=actual_id,
+            branches=branches,
+            timing_delays=[0],
+        ),
+        scorer,
+    )
+    event.update(
+        before=noflag.model_dump(),
+        enforcement_baseline="written_kick_result",
+        approximate=note,
+        valuation_status="valued",
+    )
+    finish_decision(event, decision, noflag)
+    event["opportunity"] = opportunity(
+        scorer, row["posteam"], {"no_flag": noflag, "actual": actual}, "no_flag", "actual"
+    )
+
+
 def evaluate_row(
     row: dict,
     following: dict | None,
     receiver: str | None,
     scorer: Scorer,
     clock_context: list[dict] | None = None,
+    kick_spot: float | None = None,
+) -> dict:
+    _, prefix, _ = parse_fouls(row)
+    event = value_row(row, following, receiver, scorer, clock_context, kick_spot)
+    event["unpriced_reason"] = unpriced_reason(row, event, prefix)
+    return event
+
+
+def value_row(
+    row: dict,
+    following: dict | None,
+    receiver: str | None,
+    scorer: Scorer,
+    clock_context: list[dict] | None,
+    kick_spot: float | None,
 ) -> dict:
     fouls, prefix, revised = parse_fouls(row)
     disposition = (
@@ -388,7 +785,17 @@ def evaluate_row(
         "enforcement_epa": None,
         "enforcement_baseline": None,
         "enforcement_wp_swing_pp": None,
+        "enforcement_wp_vegas_pp": None,
+        "enforcement_wp_common_clock_pp": None,
+        "enforcement_wp_vegas_common_clock_pp": None,
+        "enforcement_wp_basis": None,
+        "enforcement_wp_range": None,
+        "enforcement_wp_restarts": None,
         "home_epa_impact": None,
+        "home_wp_swing_pp": None,
+        "home_wp_vegas_swing_pp": None,
+        "approximate": None,
+        "opportunity": None,
         "valuation_status": "unpriced",
         "decision": None,
         "choice_edge_epa": None,
@@ -406,8 +813,22 @@ def evaluate_row(
             enforcement_epa=0.0,
             enforcement_wp_swing_pp=0.0,
             home_epa_impact=0.0,
+            home_wp_swing_pp=0.0,
+            home_wp_vegas_swing_pp=0.0,
+            enforcement_wp_vegas_pp=0.0,
             valuation_status="partial",
         )
+    if (
+        row.get("play_type") == "kickoff"
+        and finite(row.get("qtr"))
+        and row["qtr"] <= 4
+        and disposition not in {"declined", "rescinded"}
+    ):
+        try:
+            evaluate_kickoff(row, event, fouls, prefix, following, receiver, scorer, kick_spot)
+        except (ValueError, TypeError, KeyError) as exc:
+            event["issues"].append(str(exc))
+        return event
     try:
         before = state_from_row(row, receiver)
     except (ValueError, TypeError, KeyError):
@@ -417,6 +838,12 @@ def evaluate_row(
         )
         return event
     event["before"] = before.model_dump()
+    if score_stands(prefix, row.get("desc") or "") and disposition not in {"declined", "rescinded"}:
+        event["issues"].append(
+            "The written score stands and enforcement falls on the try or kickoff; "
+            "that effect is not valued."
+        )
+        return event
     timeout_team = None
     for admin in clock_context or []:
         if (
@@ -501,7 +928,7 @@ def evaluate_row(
                 half_seconds_remaining=base.half_seconds_remaining,
             )
         else:
-            noflag = base if dead else play_result(base, row, prefix)
+            noflag = base if dead else play_result(base, row, prefix, kick_spot)
         restart = noflag_restart(prefix, before, dead)
         branches.append(
             make_branch(
@@ -680,7 +1107,7 @@ def evaluate_row(
     nullified = event["nullified_play"]
     if nullified and nullified["recorded"]:
         try:
-            branches.append(written_erased_branch(base, prefix))
+            branches.append(written_erased_branch(base, prefix, kick_spot))
         except ValueError as exc:
             nullified["reason"] = str(exc)
     ids = {b.id for b in branches}
@@ -712,7 +1139,12 @@ def evaluate_row(
     except ValueError as exc:
         event["issues"].append(str(exc))
         return event
-    event["decision"] = decision
+    finish_decision(event, decision, before)
+    event["approximate"] = None if dead else approximation(prefix, kick_spot)
+    if event["approximate"]:
+        for branch in decision["branches"]:
+            if branch["id"] in {"no_flag", "decline", "erased_result"}:
+                branch["assumptions"] = [*branch["assumptions"], event["approximate"]]
     erased = next((b for b in decision["branches"] if b["id"] == "erased_result"), None)
     if nullified and erased:
         nullified.update(
@@ -723,12 +1155,11 @@ def evaluate_row(
             alternative_branch="erased_result",
         )
     nf = next((b for b in decision["branches"] if b["id"] == "no_flag"), None)
-    if nf:
-        event["enforcement_epa"] = nf["actual_minus_branch_epa"]
-        event["enforcement_wp_swing_pp"] = nf["actual_minus_branch_wp_pp"]
-        event["home_epa_impact"] = event["enforcement_epa"] * (
-            1 if before.possession == before.home_team else -1
-        )
+    actual_state = next(b.state for b in branches if b.id == actual_id)
+    states = {"before": before, "actual": actual_state}
+    if noflag is not None:
+        states["no_flag"] = noflag
+    event["opportunity"] = opportunity(scorer, before.possession, states, "before", "actual")
     alternatives = [
         b
         for b in decision["branches"]
@@ -767,10 +1198,38 @@ def evaluate_row(
     return event
 
 
-def build_penalties(frame: pl.DataFrame, scorer: Scorer) -> list[dict]:
+def kickoff_start_spots(rows: list[dict]) -> dict[int, float]:
+    """Measured: whole-yard mean distance to goal on the receiver's first snap after a kickoff.
+
+    `rows` must be in game order. Kicks the kicking team recovered do not count, since the
+    alternatives this feeds hand the ball to the receiving team.
+    """
+    seen = defaultdict(list)
+    pending = None
+    for row in rows:
+        if row.get("play_type") == "kickoff":
+            pending = row
+        elif pending is not None and row.get("game_id") != pending.get("game_id"):
+            pending = None
+        elif pending is not None and row.get("down") in (1, 2, 3, 4):
+            if (
+                row.get("down") == 1
+                and row.get("posteam") == pending.get("posteam")
+                and finite(row.get("yardline_100"))
+            ):
+                seen[row["season"]].append(row["yardline_100"])
+            pending = None
+    return {season: float(round(sum(v) / len(v))) for season, v in seen.items()}
+
+
+def build_penalties(
+    frame: pl.DataFrame, scorer: Scorer, kick_spots: dict[int, float] | None = None
+) -> list[dict]:
     ordering = ["game_id", "order_sequence" if "order_sequence" in frame.columns else "play_id"]
     rows = frame.sort(ordering).to_dicts()
     receivers = second_half_receivers(rows)
+    if kick_spots is None:
+        kick_spots = kickoff_start_spots(rows)
     following = {}
     next_index = None
     for i in range(len(rows) - 1, -1, -1):
@@ -784,18 +1243,30 @@ def build_penalties(frame: pl.DataFrame, scorer: Scorer) -> list[dict]:
             receivers.get(r["game_id"]),
             scorer,
             clock_context=rows[i + 1 : following[i]] if following[i] is not None else [],
+            kick_spot=kick_spots.get(r["season"]),
         )
         for i, r in enumerate(rows)
         if is_flagged(r)
     ]
 
 
+def took_effect(event: dict) -> bool:
+    """A declined or picked-up flag changes nothing, so its exact zero is not a measurement."""
+    return event.get("disposition") not in {"declined", "rescinded"}
+
+
 def coverage(events: list[dict]) -> dict:
+    effective = [e for e in events if took_effect(e)]
     return {
         "events": len(events),
         "fouls": sum(len(e["fouls"]) for e in events),
         "dispositions": dict(Counter(e["disposition"] for e in events)),
-        "valued_enforcement": sum(e["enforcement_epa"] is not None for e in events),
+        "took_effect": len(effective),
+        "valued_enforcement": sum(e["enforcement_epa"] is not None for e in effective),
+        "unpriced": sum(e["enforcement_epa"] is None for e in effective),
+        "unpriced_by_reason": dict(
+            Counter(e["unpriced_reason"] for e in effective if e.get("unpriced_reason"))
+        ),
         "valued_choices": sum(e["choice_edge_epa"] is not None for e in events),
         "scenario_choices": sum(e["choice_edge_scenarios"] is not None for e in events),
         "reported_runoffs": sum(e["runoff"]["applied_seconds"] > 0 for e in events),

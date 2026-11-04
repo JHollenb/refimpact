@@ -89,6 +89,7 @@ def test_receiving_team_inference_does_not_use_future_plays():
                 "game_id": "g",
                 "qtr": 1,
                 "game_seconds_remaining": 3600,
+                "play_type": "kickoff",
                 "kickoff_attempt": 1,
                 "defteam": "SEA",
                 "posteam": "SF",
@@ -96,3 +97,38 @@ def test_receiving_team_inference_does_not_use_future_plays():
         ]
     )
     assert result == {"g": "SEA"}
+
+
+def test_flagged_opening_kickoff_keeps_the_second_half_receiver():
+    # 2026_05_PHI_JAX: the nullified return has a null kickoff_attempt, the re-kick is at 3587 s.
+    rows = [
+        {"game_id": "g", "qtr": 1, "game_seconds_remaining": 3600, "play_type": None},
+        {
+            "game_id": "g",
+            "qtr": 1,
+            "game_seconds_remaining": 3600,
+            "play_type": "kickoff",
+            "kickoff_attempt": None,
+            "defteam": "PHI",
+            "posteam": "JAX",
+        },
+        {
+            "game_id": "g",
+            "qtr": 1,
+            "game_seconds_remaining": 3587,
+            "play_type": "kickoff",
+            "kickoff_attempt": 1,
+            "defteam": "PHI",
+            "posteam": "JAX",
+        },
+    ]
+    assert second_half_receivers(rows) == {"g": "PHI"}
+
+
+def test_pregame_comment_rows_do_not_pick_the_receiver():
+    # 2024_05_DAL_PIT: a weather comment names DAL as defteam before PIT kicks to DAL.
+    rows = [
+        {"game_id": "g", "qtr": 1, "play_type": None, "defteam": "DAL", "posteam": "PIT"},
+        {"game_id": "g", "qtr": 1, "play_type": "kickoff", "defteam": "PIT", "posteam": "DAL"},
+    ]
+    assert second_half_receivers(rows) == {"g": "PIT"}

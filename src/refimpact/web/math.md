@@ -33,6 +33,12 @@ EP_T(s)=\sigma_T(s)EP_P(s).
 This estimates net expected points through the next scoring event or half end;
 it is not expected final score, drive points or total future offensive production.
 
+The next-score classes also feed the opportunity view in section 10. Valued states
+preceding a field goal or kneel use this base EP, not upstream's special-cased EP for those
+rows (mean gap 0.22, max 1.92 points; 72 priced flags in 2024 and 2026 have such a next row).
+Both branches use the same model, so the comparison is coherent; it can differ from the
+published EPA on those rows.
+
 The non-Vegas WP model directly predicts possession-team win probability `w(s)`:
 
 \[
@@ -51,6 +57,16 @@ R(s)=\frac{D_P(s)}{\exp[-4(3600-t_{game}(s))/3600]}.
 The EP features use half clock, field position, distance, down indicators, timeouts,
 home/neutral indicator, roof indicators and the upstream season-era indicators
 (through 2001; 2002–05; 2006–13; 2014–17; 2018 onward).
+
+At neutral sites the WP model keeps the home indicator at 1, as upstream does. It moves WP
+about 5.9 pp at the median and is inherited, not adjusted. Only EP uses home=0 there.
+
+The spread (Vegas) WP model is the same upstream family with one more feature,
+`spread_time = S_P exp[-4(3600-t_game)/3600]`, where `S_P` is nflverse `spread_line` from the
+possession team's side. It is pinned at the same commit and shown beside the non-Vegas model,
+never instead of it. Measured against published `vegas_wp` on 58,881 regulation snaps in 2024
+and 2026 the largest error is 1.2e-7, except 73 rows of 2024_05_DAL_PIT (up to 7.5 pp), where
+upstream reads a pregame comment row as the opening kick and mislabels the second-half receiver.
 
 Learned tree models are approximate and need not be locally monotone for every
 apparently favorable yardage change. We preserve their predictions and signs.
@@ -143,10 +159,36 @@ action is a separate conditional branch. It is never inferred from a no-play yar
 zero, penalty yards, a later conversion or an assumed punt.
 
 Interception touchbacks use the receiving team's own 20 (not a kickoff touchback spot).
-A return requires an unambiguous written endpoint. Unsupported touchdowns, other
-turnovers, ambiguous gains, missing spots and missing states remain unpriced. A
-wholly declined flag has exactly zero immediate spatial enforcement effect at the
-common clock, but its acceptance choice and clock-stoppage effects can differ.
+A return requires an unambiguous written endpoint. A wholly declined flag has exactly zero
+immediate spatial enforcement effect at the common clock, but its acceptance choice and
+clock-stoppage effects can differ.
+
+**Erased scores (approximate, labeled).** An erased touchdown or field goal is a branch with
+the points on the board and the opponent's first down after the kick, at the same clock:
+
+\[
+EPA_T(u;b)=p+EP_T(s_{kick})-EP_T(b),\qquad p=\pm7\text{ or }\pm3,
+\]
+
+so the value against an actual branch is `7 - EP_opp(s_kick)` rather than a flat 7, and it is
+coherent with how the actual branch is valued. The extra point is assumed good. `s_kick` has
+distance to goal equal to the season's whole-yard mean on the receiver's first snap after a
+kickoff, measured from the rows themselves (70 in 2024, 69 in 2026). The win-chance branch adds
+the points and uses the same state. A defensive or return touchdown credits that team. A score
+that stood, with enforcement on the try or kickoff, stays unpriced.
+
+**Kicks and fumbles.** A punt's no-flag branch is the receiving team's first down at the written
+return endpoint, fair catch, out-of-bounds spot or touchback. A missed field goal gives the
+opponent the spot of the kick (line of scrimmage plus eight) or its own 20 if that is farther
+out. A kickoff row has no scrimmage pre-state, so it compares the next recorded snap with the
+written return, using that snap's clock and timeouts for both; the shared before-state is the
+no-flag branch. A single written fumble recovery, with any return, gives possession and spot.
+Muffs, blocks, laterals, multiple turnovers, onside kicks and safeties remain unpriced.
+
+Every remaining unpriced flag carries an `unpriced_reason`: overtime, tries, kick-rule placements
+with no foul-free result, scores that stood, feeds that do not describe the play, unidentified
+fouls, or ambiguous kick and turnover sequences. Across 2024 and 2026, 5,537 flags took effect;
+338 (6%) remain unpriced, down from 1,051 (19%).
 
 The signed choice edge is `EPA(actual option)-EPA(other option)` and likewise for
 WPA. It is not an assertion that the selected option was optimal. Multiple fouls on
@@ -207,6 +249,27 @@ A^{EPA}(\delta)=I^{EPA}(\delta)-I^{EPA}(0).
 These include the declared interventions jointly; the model is nonlinear, so separate
 clock and timeout effects are not assumed independently additive.
 
+Inside 2:00 of a half the flag's win-chance swing also reports a range over `delta` of 0, 10 and
+20 seconds; these are sampled scenarios, not a confidence interval.
+
+The headline `enforcement_wp_swing_pp` charges a wait only when the team needing time could not
+stop the clock. That team is the offense when tied or behind, otherwise the defense, read from
+the score and timeouts in the branch whose clock runs:
+
+| Team needing time | Timeouts | Wait charged |
+|---|---:|---:|
+| Either | 1 or more | 0 s, same-clock headline |
+| Has the ball | 0 | 10 s, a hurry-up |
+| On defense | 0 | 20 s, the offense runs it down |
+
+`enforcement_wp_common_clock_pp` always keeps the same-clock value. An unknown restart, or two
+running branches that need different waits, keeps the same-clock headline and the range. A wait
+that runs out the half counts only for a team that is ahead, which wants that outcome; a team tied
+or behind would hurry or spike, so its 0% is left out. The 10 s and 20 s are assumptions, not
+measurements. The timeout a team spends to stop the clock is not charged, so a same-clock headline
+slightly favors the branch where that timeout would be used.
+Expected points stay at the common clock everywhere.
+
 ## 5. Observed offense, defense and drive production
 
 Let `S_T` be known-EPA scrimmage rows for offense `T`: runs, passes, kneels, spikes,
@@ -256,9 +319,16 @@ C^O_T(n)=\sum_{i\le n,\ i\in S_T}EPA_i,
 \]
 
 The penalty ledger spans both possessions. The game's `net_home_epa` is its final
-known-effects penalty sum, split into home-on-offense and home-on-defense subtotals.
-If no estimate is known the ledger is unknown. Known zero-valued declined flags do
-count as known observations. Coverage is `known events / reported events`.
+known-effects penalty sum, split into home-on-offense and home-on-defense subtotals. It is shown
+as the **expected margin shift, ignores score**: EP has no score input, so a flag in a blowout
+counts in full. In 2024 and 2026, three-score flags were 10.5% of absolute ledger EPA and 1.4%
+of absolute WP. The game view therefore leads with each flag's win-chance swing at the moment,
+the largest swing and the count of swings of 5 pp or more, with the unpriced count beside them.
+Swings are never added together.
+
+If no estimate is known the ledger is unknown. A declined or picked-up flag's exact zero is not
+a measurement: it adds nothing to the sum and is not counted as priced. Coverage is priced flags
+over flags that took effect.
 
 Native observed home play WPA is `100(home_wp_post-home_wp)`. Game cumulative WP
 change is `100(latest recorded WP-first recorded WP)`, **not** a sum over gaps and
@@ -324,14 +394,12 @@ Reusing that identity reuses its stored results. All downstream joins must inclu
 
 ## 9. Display and bot selection conventions
 
-Computations retain full precision; labels round EPA to the displayed decimal places
-and win chance/WPA to the displayed percentage precision. Ranking penalties uses the
-largest absolute known ruling/choice WP swing (pp), with absolute EPA only breaking
-ties; points and percentage points are never compared as the same unit.
-
-The scoreboard's decorative EPA-track marker is `clip(50 + 7*net_home_epa, 4, 96)` in
-CSS percent coordinates. It is not win probability, a relative percentage benefit,
-or a new statistic. History and scatter charts label their numerical units explicitly.
+Computations and the API retain full precision. Labels round EPA to the displayed decimal
+places and show win chance and WPA in whole points, because the models are tree steps: one extra
+yard moves WP up to 2 pp at the 99th percentile, with a median of zero. A ruling swing under 2 pp
+is labeled within model noise. Ranking penalties uses the largest absolute known ruling/choice WP
+swing (pp), with absolute EPA only breaking ties; points and percentage points are never compared
+as the same unit. History and scatter charts label their numerical units explicitly.
 
 The original bot's optional queue filter keeps eligible legacy comparisons when
 `abs(wp_swing_pp) >= min_swing`. Those four dead-ball types have stricter reconstruction
@@ -345,5 +413,30 @@ An edit replaces the state recorded after a play. At the moment, `win-chance swi
 
 A drive result then ends the edited drive with `home score at rejoin = entered home score + points if home has the ball`, and likewise for away. Every later row uses its recorded pre-snap state with `score shift = alternate score at rejoin - recorded score at the end of that drive`. Nothing else about later rows changes, so the alternate line is hindsight accounting and not a forecast. Rows without a scrimmage state carry the last alternate value. The final row is 100% or 0% for a decided margin and unknown for a tie, because overtime is not modeled.
 
-The disputed-calls range adds points swings as an approximation, from zero (none wrong) to all of them (all wrong). Win-chance swings are never added.
+A drive result belongs to the team named in the edit. The dashboard defaults to the team that ran the play. The API defaults to the team with the ball in the entered state and warns when that differs, because on a drive's last play it is the next team, whose real drive still happens. In an overtime game the alternate stays regulation-only: `final.actual_regulation` gives the matching actual score and the last row ends at the decided alternate result. A play with no later snap in its half starts from its own pre-snap state and says so. At the edit point the chart's actual line reads the same post-play state as the card, so the gap is the same number.
+
+The disputed-calls report sums points swings as `home_sum_at_moment_expected_points`. That is a sum of at-the-moment expected points, not a final margin: expected points estimate the next score of the half, and later plays would have changed. Win-chance swings are never added.
+
+## 10. Opportunity: downs in hand and next-score chances
+
+A flag or edit shows, for the team with the ball before the snap,
+
+\[
+downs(s)=5-d(s)\text{ with the ball, else }0,
+\]
+
+and the EP model's next-score classes `p_TD`, `p_FG`, `p_none` from each state, in that team's frame. A reset to first down gains 0 downs on first, +1 on second, +2 on third and +3 on fourth. These are chances available. Plays run is the wrong count: it stops when a team scores, so a quick touchdown reads as less opportunity. Extra downs flip field goals into touchdowns. The classes are the next score of the half, not the result of this drive, and nothing here is fitted or added to the models.
+
+Measured from 11 seasons of nflverse play-by-play (2016 to 2026 Week 8), with the scripts outside this repository:
+
+- Inside the 5 at goal-to-go, TD chance at drive end rises with downs in hand at every yard: zero violations in 15 down pairs over the five seasons 2022 to 2026.
+- Per-snap TD rate is flat by down: .51, .55, .53, .58 at the 1-2 and .33, .34, .39, .34 at the 3-5, so each down is close to a fresh chance.
+- A defensive flag that resets to first on 3rd or 4th and goal inside the 5 (n=77): TD 88% vs 49% from the same state without a flag, FG 4% vs 31%. Realized gain +1.81 points (90% CI 1.28 to 2.26) against a model gain of +1.86 (gap −0.05, −0.57 to 0.41). The same flag on 1st down gains +0.28 (n=114) and on 2nd +0.79 (n=76).
+- 1st & 15+ between the own 20 and the opponent 40 (n=2,250): realized minus model −0.03 (−0.23 to 0.16). The −0.51 seen in 2025-26 did not replicate (2016-24 +0.05, n=1,916).
+
+So the EP model already prices the extra downs, and no adjustment is applied.
+
+## 11. Heat: the game so far
+
+Each game shows, for each team, the sum of native EPA on its last 5 scrimmage snaps (penalties included), big plays in its last 10 snaps (a run of 10+ yards or a completed pass of 20+ yards), and the current scoring run (points since the opponent last scored). There is no strength adjustment. This describes the game so far. It is not a forecast and feeds no value. Measured on 2025 and 2026 play-by-play (n=44,902): one standard deviation of last-5 EPA goes with +0.011 EPA on the next snap (90% CI .001 to .022), and the team's following 5 snaps "predict" the current one just as well (+.012), so it reflects game-level form rather than a streak.
 

@@ -29,6 +29,8 @@ class State(Record):
     second_half_receiver: str | None = None
     roof: Literal["outdoors", "dome", "open", "closed", "retractable"]
     neutral_site: bool = False
+    # nflverse spread_line (positive favors home); read only by the Vegas-model comparison.
+    home_spread: float | None = None
 
     @model_validator(mode="after")
     def consistent(self):

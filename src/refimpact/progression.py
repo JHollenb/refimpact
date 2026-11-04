@@ -5,12 +5,28 @@ Win chance uses native nflfastR home_wp/home_wp_post, never a sum of ruling swin
 
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import defaultdict, deque
 
 import polars as pl
 
-from refimpact.penalties import finite
+from refimpact.penalties import finite, took_effect
 from refimpact.production import SNAPS
+
+# Heat windows and big-play thresholds. They describe the game so far and feed no values.
+HEAT_SNAPS = 5
+HEAT_BIG_PLAY_SNAPS = 10
+BIG_RUN = 10
+BIG_PASS = 20
+
+
+HEAT_NOTE = (
+    "Describes the game so far; it is not a forecast and feeds no other value. Last-5 is the sum "
+    "of native EPA on a team's last 5 scrimmage snaps, penalties included. A big play is a run of "
+    "10+ yards or a completed pass of 20+ yards, over its last 10 snaps. A scoring run is points "
+    "since the opponent last scored. In 2025 and 2026 play-by-play, last-5 EPA predicted the "
+    "next snap no better than the team's following 5 snaps did, so it reads as how the game is "
+    "going, not as a streak that carries forward."
+)
 
 
 def probability(value):
@@ -25,6 +41,16 @@ def offensive_row(row):
     return row.get("down") in (1, 2, 3, 4) and (
         row.get("play_type") in SNAPS
         or (row.get("play_type") == "no_play" and row.get("_flagged", False))
+    )
+
+
+def big_play(row):
+    """Descriptive label only: a run of 10+ yards or a completed pass of 20+ yards."""
+    yards = row.get("yards_gained")
+    if not finite(yards):
+        return False
+    return (row.get("play_type") == "run" and yards >= BIG_RUN) or (
+        row.get("play_type") == "pass" and yards >= BIG_PASS
     )
 
 
@@ -47,6 +73,10 @@ def build_progression(frame: pl.DataFrame, penalties: list[dict], drives: list[d
         parts = {"on_offense": [], "on_defense": []}
         timeline, drive_windows = [], defaultdict(list)
         initial_wp, latest_wp = None, None
+        recent_epa = {team: deque(maxlen=HEAT_SNAPS) for team in teams}
+        recent_big = {team: deque(maxlen=HEAT_BIG_PLAY_SNAPS) for team in teams}
+        scored = {team: 0 for team in teams}
+        run_team, run_points = None, 0
         for row in rows:
             play_id = str(int(row["play_id"]))
             event = events.get(f"{game_id}:{play_id}")
@@ -81,13 +111,23 @@ def build_progression(frame: pl.DataFrame, penalties: list[dict], drives: list[d
                 if epa is not None:
                     cumulative[possession] += epa
                     offense_known[possession] += 1
+                    recent_epa[possession].append(epa)
                 else:
                     offense_missing[possession] += 1
+                recent_big[possession].append(big_play(row))
+            for team, column in ((home, "total_home_score"), (away, "total_away_score")):
+                total = row.get(column)
+                if finite(total) and total > scored[team]:
+                    gained = int(total) - scored[team]
+                    run_points = run_points + gained if run_team == team else gained
+                    run_team, scored[team] = team, int(total)
             if event:
                 impact = event.get("home_epa_impact")
                 if impact is not None:
                     penalty_total += impact
-                    penalty_known += 1
+                    # A declined flag's exact zero is not a measured effect.
+                    if took_effect(event):
+                        penalty_known += 1
                     parts[
                         "on_offense" if event.get("reference_team") == home else "on_defense"
                     ].append(impact)
@@ -122,6 +162,12 @@ def build_progression(frame: pl.DataFrame, penalties: list[dict], drives: list[d
                 "home_wp_change_pp": difference(after, before) if not marker else None,
                 "home_wp_change_from_start_pp": difference(latest_wp, initial_wp),
                 "terminal": terminal,
+                "heat": {
+                    "epa_last_5": {team: sum(recent_epa[team]) for team in teams},
+                    "snaps_last_5": {team: len(recent_epa[team]) for team in teams},
+                    "big_plays_last_10": {team: sum(recent_big[team]) for team in teams},
+                    "scoring_run": {"team": run_team, "points": run_points},
+                },
             }
             timeline.append(point)
             if drive_id in drive_map and row.get("play_type") != "kickoff":
@@ -138,6 +184,7 @@ def build_progression(frame: pl.DataFrame, penalties: list[dict], drives: list[d
                         "cumulative_home_penalty_benefit_epa",
                         "penalty_effects_known",
                         "penalty_effects_missing",
+                        "heat",
                     ]
                 }
         game_drives = []
@@ -220,6 +267,7 @@ def build_progression(frame: pl.DataFrame, penalties: list[dict], drives: list[d
             },
             "timeline": timeline,
             "drives": game_drives,
+            "heat_note": HEAT_NOTE,
             "note": "Observed offense EPA already includes actual penalties. Estimated penalty "
             "benefit is a separate sum of local comparisons across both possessions, never added "
             "to production. Native win chance is a state probability; ruling swings are not summed "

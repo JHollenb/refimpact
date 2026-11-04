@@ -15,6 +15,7 @@ from typing import Literal
 
 from pydantic import Field, HttpUrl, ValidationError, model_validator
 
+from refimpact.decisions import opportunity
 from refimpact.models import MODEL_ID, Scorer
 from refimpact.penalties import finite
 from refimpact.replay import second_half_receivers, state_from_row
@@ -49,6 +50,9 @@ class ScenarioEdit(Record):
     play_id: str = Field(pattern=r"^[\w.-]{1,64}$")
     changes: StateChanges = Field(default_factory=StateChanges)
     drive_result: Literal["td_xp", "td_2pt", "fg", "none"] | None = None
+    # Who the drive result belongs to. Unset means the team with the ball in the entered state,
+    # which on a drive's last play is the next team, so the result flags a warning then.
+    drive_team: str | None = Team
 
 
 class ScenarioRequest(Record):
@@ -109,18 +113,24 @@ def first_half(row: dict) -> bool:
     return row.get("qtr", 5) <= 2
 
 
+def recorded_next(rows: list[dict], index: int, receiver: str | None) -> State | None:
+    """The next snap in the same half, if there is one."""
+    row = rows[index]
+    for later in rows[index + 1 :]:
+        if not finite(later.get("qtr")) or first_half(later) != first_half(row):
+            return None
+        state = row_state(later, receiver)
+        if state is not None:
+            return state
+    return None
+
+
 def default_state(rows: list[dict], index: int, receiver: str | None) -> State | None:
     """The state recorded after a play: next snap in the same half, else the play's own state."""
     row = rows[index]
     if not finite(row.get("qtr")) or row["qtr"] > 4:
         return None
-    for later in rows[index + 1 :]:
-        if not finite(later.get("qtr")) or first_half(later) != first_half(row):
-            break
-        state = row_state(later, receiver)
-        if state is not None:
-            return state
-    return row_state(row, receiver)
+    return recorded_next(rows, index, receiver) or row_state(row, receiver)
 
 
 def editable(row: dict) -> bool:
@@ -168,6 +178,7 @@ def scenario_plays(rows: list[dict]) -> dict:
                 "description": row.get("desc"),
                 "flagged": row.get("penalty") == 1 or "penalty" in (row.get("desc") or "").lower(),
                 "default": state.model_dump() | {"quarter_seconds": quarter_seconds(state)},
+                "default_is_pre_play": recorded_next(rows, i, receiver) is None,
             }
         )
     first = plays[0]["default"] if plays else None
@@ -177,7 +188,7 @@ def scenario_plays(rows: list[dict]) -> dict:
         "away_team": rows[0]["away_team"],
         "context": {
             key: first[key]
-            for key in ("season", "roof", "neutral_site", "second_half_receiver")
+            for key in ("season", "roof", "neutral_site", "second_half_receiver", "home_spread")
         }
         if first
         else None,
@@ -190,6 +201,7 @@ def estimate(scorer: Scorer, state: State, home: str) -> dict:
     return {
         "state": state.model_dump() | {"quarter_seconds": quarter_seconds(state)},
         "home_wp": value.wp,
+        "home_wp_vegas": scorer.vegas_wp([state], home)[0],
         "home_ep": value.ep,
         "home_value": state.score_diff(home) + value.ep,
     }
@@ -300,6 +312,21 @@ def evaluate_scenario(rows: list[dict], request: ScenarioRequest, scorer: Scorer
             alternate_value = estimate(scorer, alternate, home)
             end = drive_end(rows, i) if edit.drive_result else i
             after = published_wp(rows[end + 1]) if end + 1 < len(rows) else None
+            team = edit.drive_team or alternate.possession
+            if team not in {home, away}:
+                raise ValueError(f"Play {edit.play_id}: {team} is not in this game")
+            warnings = []
+            if recorded_next(rows, i, receiver) is None:
+                warnings.append(
+                    "No later snap in this half, so the recorded state is this play's own "
+                    "pre-snap state, not what followed it."
+                )
+            if edit.drive_result and edit.drive_team is None and team != row.get("posteam"):
+                warnings.append(
+                    f"The drive result went to {team}, who has the ball next, not "
+                    f"{row.get('posteam')}, who ran this play. {team}'s real next drive still "
+                    "happens. Choose the team if that is not what you meant."
+                )
             detail = {
                 "play_id": edit.play_id,
                 "qtr": row.get("qtr"),
@@ -308,8 +335,22 @@ def evaluate_scenario(rows: list[dict], request: ScenarioRequest, scorer: Scorer
                 "drive_result": edit.drive_result,
                 "actual": actual_value,
                 "alternate": alternate_value,
+                "drive_team": team if edit.drive_result else None,
+                "warnings": warnings,
                 "wp_swing_pp": 100 * (alternate_value["home_wp"] - actual_value["home_wp"]),
+                "wp_vegas_swing_pp": 100
+                * (alternate_value["home_wp_vegas"] - actual_value["home_wp_vegas"])
+                if actual_value["home_wp_vegas"] is not None
+                and alternate_value["home_wp_vegas"] is not None
+                else None,
                 "points_swing": alternate_value["home_value"] - actual_value["home_value"],
+                "opportunity": opportunity(
+                    scorer,
+                    alternate.possession,
+                    {"recorded": actual, "yours": alternate},
+                    "recorded",
+                    "yours",
+                ),
                 # What the real game did next, on the real scoreboard, so separate from the call.
                 "aftermath_pp": 100 * (after - actual_value["home_wp"])
                 if after is not None and edit.drive_result and not branched
@@ -318,6 +359,9 @@ def evaluate_scenario(rows: list[dict], request: ScenarioRequest, scorer: Scorer
             details.append(detail)
             branched = True
             point["status"] = "edit"
+            # Both lines read the state after the play here, so the chart gap matches the card.
+            point["actual_home_wp_before"] = point["actual_home_wp"]
+            point["actual_home_wp"] = scorer.predict([state], home)[0].wp
             point["alternate_home_wp"] = alternate_value["home_wp"]
             point["alternate_home_score"] = alternate.home_score
             point["alternate_away_score"] = alternate.away_score
@@ -326,8 +370,8 @@ def evaluate_scenario(rows: list[dict], request: ScenarioRequest, scorer: Scorer
                 i += 1
                 continue
             points = DRIVE_POINTS[edit.drive_result]
-            end_home = alternate.home_score + (points if alternate.possession == home else 0)
-            end_away = alternate.away_score + (points if alternate.possession == away else 0)
+            end_home = alternate.home_score + (points if team == home else 0)
+            end_away = alternate.away_score + (points if team == away else 0)
             home_shift, away_shift = end_home - scores[end][0], end_away - scores[end][1]
             detail["alternate_drive_end_score"] = {"home": end_home, "away": end_away}
             for j in range(i + 1, end + 1):
@@ -387,6 +431,7 @@ def evaluate_scenario(rows: list[dict], request: ScenarioRequest, scorer: Scorer
     regulation = [i for i, row in enumerate(rows) if finite(row.get("qtr")) and row["qtr"] <= 4]
     final_row = any(is_terminal(row) for row in rows)
     last = regulation[-1] if regulation else len(rows) - 1
+    overtime = any(finite(row.get("qtr")) and row["qtr"] > 4 for row in rows)
     alternate_final = None
     if details and details[-1]["drive_result"] is not None:
         final_home, final_away = scores[last][0] + home_shift, scores[last][1] + away_shift
@@ -407,11 +452,16 @@ def evaluate_scenario(rows: list[dict], request: ScenarioRequest, scorer: Scorer
         terminal = next(
             (p for p, row in zip(timeline, rows, strict=True) if is_terminal(row)), None
         )
-        if terminal is not None and terminal["status"] == "modeled":
+        # In an overtime game the last rows stop at regulation; a decided alternate still ends.
+        if terminal is not None and (
+            terminal["status"] == "modeled" or (overtime and terminal["status"] == "stopped")
+        ):
             result = alternate_final["result"]
             terminal["alternate_home_wp"] = (
                 1.0 if result == "home_win" else 0.0 if result == "away_win" else None
             )
+            terminal["alternate_home_score"] = final_home
+            terminal["alternate_away_score"] = final_away
             terminal["carried"] = False
     return {
         "game_id": request.game_id,
@@ -422,6 +472,10 @@ def evaluate_scenario(rows: list[dict], request: ScenarioRequest, scorer: Scorer
         "timeline": timeline,
         "final": {
             "actual": {"home": scores[-1][0], "away": scores[-1][1]},
+            # The alternate is regulation-only, so an overtime game needs the matching actual.
+            "actual_regulation": {"home": scores[last][0], "away": scores[last][1]}
+            if overtime
+            else None,
             "alternate": alternate_final,
         },
         "parity": {
@@ -562,18 +616,14 @@ def disputed_report(saved: list[dict], game_id: str, source_id: str | None) -> d
                 "stacked": position > 0,
             }
     rows = sorted(calls.values(), key=lambda c: float(c["play_id"]))
-    latest = next((r["result"] for r in saved), None)
-    actual = latest["final"]["actual"] if latest else None
-    total = sum(c["points_swing"] for c in rows)
-    margin = actual["home"] - actual["away"] if actual else None
     return {
         "game_id": game_id,
         "calls": rows,
-        "home_points_if_all_wrong": total if rows else None,
-        "actual_home_margin": margin,
-        "home_margin_if_all_wrong": margin + total if rows and margin is not None else None,
-        "note": "Range runs from none of these calls being wrong (actual margin) to all of them "
-        "being wrong. Point values are at-the-moment estimates added as an approximation; "
-        "win-chance swings are not added. Sources are the people disputing a call, not proof "
-        "that it was wrong. " + NOTE,
+        "home_sum_at_moment_expected_points": sum(c["points_swing"] for c in rows)
+        if rows
+        else None,
+        "note": "Sum of at-the-moment expected points, each read at its own moment. It is not a "
+        "final margin and not added to the score: expected points estimate the next score of "
+        "the half, and later plays would have changed. Win-chance swings are not added. Sources "
+        "are the people disputing a call, not proof that it was wrong. " + NOTE,
     }

@@ -135,8 +135,8 @@ curl -X POST http://127.0.0.1:8787/api/v1/scenarios/evaluate \
     {"play_id":"2895","changes":{"down":1,"ydstogo":1,"yardline_100":1},"drive_result":"td_xp"}]}'
 ```
 
-For that edit SEA's win chance at the moment is 29.6% rather than the recorded 21.1%. Holding
-later plays, SEA leads 24-20 at the Q4 9:01 delay of game (68.0% rather than 26.9%) and the
+For that edit SEA's win chance at the moment is 30% rather than the recorded 21%. Holding
+later plays, SEA leads 24-20 at the Q4 9:01 delay of game (68% rather than 27%) and the
 final is CHI 34-24. The two numbers answer different questions. The first is what the call was
 worth when it happened. The second is **hindsight**: a touchdown would have changed everything
 after it, including field position, play-calling and the turnover that set up SEA's later score.
@@ -145,14 +145,20 @@ a blocked kick is not the officials' doing.
 
 Without edits the same code reproduces the published `home_wp` line, and every response reports
 that check. Overtime is not modeled: a tied alternate final says so rather than giving a win
-chance, and overtime rows are not re-scored. Kickoffs and tries have no scrimmage state, so the
-alternate line carries its last value across them. A blank state gets a win chance with no
-timeline.
+chance, overtime rows are not re-scored, and the alternate is compared with the regulation score.
+Kickoffs and tries have no scrimmage state, so the alternate line carries its last value across
+them. A blank state gets a win chance with no timeline. `drive_team` names who a drive result
+belongs to; the dashboard defaults to the team that ran the play, and the API warns when its
+default gives the result to the next team.
+
+Each edit also shows the **opportunity** view: downs in hand and the next-score TD, FG and no-score
+chances, for the recorded state and yours. Extra downs flip field goals into touchdowns; see
+sections 10 and 11 of `/api/v1/math` for the measured goal-line results and the heat panel.
 
 Save a scenario with a label, type, assumptions and source link. Marking it disputed requires a
-source and adds it to the game's **Disputed calls** report, which shows the range from none of
-those calls being wrong (the actual margin) to all of them being wrong. Win-chance swings are not
-added; points are added as an approximation. A source shows who disputes a call, not that the call
+source and adds it to the game's **Disputed calls** report, which gives the sum of at-the-moment
+expected points for those calls. That sum is not a final margin. Win-chance swings are not added.
+A source shows who disputes a call, not that the call
 was wrong, and this tool never decides that. Report only what you have looked for: disputes
 collected for one team alone will lean toward that team.
 
@@ -165,14 +171,25 @@ compute one, but only this computer can save or delete, because the LAN server h
 | `POST /api/v1/scenarios/evaluate` | Moment comparison and timeline; saves nothing |
 | `POST /api/v1/scenarios/state` | Win chance for one blank state |
 | `GET` / `POST /api/v1/scenarios`, `GET` / `DELETE /api/v1/scenarios/{id}` | Saved scenarios |
-| `GET /api/v1/scenarios/disputes?game_id=...` | Disputed calls and the margin range |
+| `GET /api/v1/scenarios/disputes?game_id=...` | Disputed calls and their summed expected points |
 
 ## Reading the scoreboard and game history
 
-The scoreboard's **Estimated penalty benefit** is a known-effects comparison ledger
-across both possessions. It measures what penalties were worth, not what officials did: a
-correct flag on a real foul counts as a benefit to the other team. **Observed offense EPA · includes penalties** is actual
-scrimmage production. These are separate measurements, not components to add together.
+The scoreboard leads with **each game's biggest flag swings**: one flag's effect on win chance
+when it happened, against keeping the described play, in whole points. Swings under 2 pp are within
+model noise, and the spread (Vegas) model is shown beside the non-Vegas one. Inside 2:00 a swing
+also reports a clock range; see `/api/v1/math`. Swings of 5+ pp are counted, unpriced flags are
+counted beside them, and swings are never added together.
+
+The **expected margin shift, ignores score** is a known-effects comparison ledger across both
+possessions. EP has no score input, so a blowout flag counts in full. It measures what penalties
+were worth, not what officials did: a correct flag on a real foul counts as a benefit to the other
+team. **Observed offense EPA · includes penalties** is actual scrimmage production. These are
+separate measurements, not components to add together.
+
+A game's **How the game went** panel gives each team's EPA over its last 5 snaps, big plays over
+its last 10 and the current scoring run. It describes the game so far, is not a forecast, and
+feeds no value.
 For CHI at SEA in Week 8, SEA's +14.16 estimated benefit consists of +13.97 while SEA had
 the ball and +0.19 while CHI had it. SEA's observed offensive EPA is -7.75, already
 including actual penalties. The local comparison sum cannot be subtracted to replay a
@@ -208,7 +225,7 @@ replay reports save `progression.json` alongside the original production and dri
 ## Relationship with score and winning
 
 The metric selector compares one of three home-oriented values with final home score
-margin, once per game: net measured penalty enforcement EPA, home minus away offensive
+margin, once per game: the expected margin shift (net measured enforcement EPA), home minus away offensive
 EPA per snap, or home minus away observed drive EPA. Defense allowed mirrors the
 opponent's offensive production; it is not an independent second contribution to add.
 The selected-metric win count compares the sign of the metric with the winner, excluding
@@ -297,15 +314,18 @@ comparisons; `nullified_coverage` discloses the available and missing result cou
 When text supplies a gain/loss, no gain, or an incompletion, the parser constructs the
 state if that action counted, and compares it with actual enforcement in EPA and WP
 percentage points. A failed third down becomes fourth down, not an assumed punt. A
-failed fourth down changes possession. Scoring, turnovers requiring further evidence,
-ambiguous multiple gains, and non-applicable states retain their written text without
-an invented numerical value. Revised play descriptions use the final written version.
+failed fourth down changes possession. Erased touchdowns and field goals are points on the board
+plus the opponent after the kick, at a measured season-mean start spot, with the extra point assumed
+good; these values are approximate and labeled. Muffs, blocks, laterals, several turnovers, safeties,
+scores that stood and non-applicable states retain their written text without an invented numerical
+value, with an `unpriced_reason`. Revised play descriptions use the final written version.
 The action is conditional evidence: it does not establish when a whistle sounded or
 whether players reacted to it.
 
 Interception touchbacks and explicit, unambiguous interception return endpoints are
-recoverable automatically, including on no-play rows. Other turnovers/scoring states
-still require enough supported outcome evidence; they are not assigned zero.
+recoverable automatically, including on no-play rows, as are written punt and kickoff results and
+a single written fumble recovery. A kickoff row has no scrimmage pre-state, so it compares the next
+recorded snap with the written return. Anything else stays unpriced; it is not assigned zero.
 
 Clock comparisons apply a reported runoff once. Adjacent administrative rows explicitly
 recording a timeout to avoid runoff are linked to the penalty, and the actual branch
@@ -340,8 +360,7 @@ A caught 20-yard pass with declined DPI does not reveal the interference spot. W
 the catch and show labeled acceptance scenarios at sampled legal spots, without treating
 the catch location as the foul location or assigning a probability. The sampled range is
 neither a confidence interval nor an exhaustive bound. Supply the actual foul spot via
-`POST /api/v1/decisions` for a precise conditional comparison. Unrecoverable scoring,
-turnover, kicking, or enforcement alternatives stay unpriced.
+`POST /api/v1/decisions` for a precise conditional comparison.
 
 Reported ten-second runoffs are deducted once, including replay-only clock administration.
 If a deduction exhausts the half or regulation, the evaluator uses an explicit terminal

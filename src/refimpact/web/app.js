@@ -2,11 +2,15 @@
 const $ = (selector) => document.querySelector(selector);
 const escapeHTML = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const signed = (n, digits = 2) => n == null ? "—" : `${n >= 0 ? "+" : ""}${n.toFixed(digits)}`;
-const percent = (n) => n == null ? "unpriced" : `${(n * 100).toFixed(1)}%`;
+// Win chance is shown in whole points: the trees step, so finer digits are not known.
+const percent = (n) => n == null ? "unpriced" : `${(n * 100).toFixed(0)}%`;
+const wholePP = (n) => { if (n == null) return "—"; const r = Math.round(n); return r === 0 ? "0 pp" : `${r > 0 ? "+" : ""}${r} pp`; };
+const NOISE_PP = 2;
+const swingPP = (n) => n == null ? "—" : Math.abs(n) < NOISE_PP ? `${wholePP(n)} (within model noise)` : wholePP(n);
 const colorClass = (n) => n == null || Math.abs(n) < 0.000001 ? "neutral" : n > 0 ? "positive" : "negative";
 const shortDate = (s) => new Date(`${s}T12:00:00`).toLocaleDateString("en-US", {month:"short",day:"numeric"});
 const colors = {ARI:"#7d2736",ATL:"#842b36",BAL:"#4a367d",BUF:"#284f9a",CAR:"#176b8c",CHI:"#a34b22",CIN:"#a54824",CLE:"#7b4734",DAL:"#334c6e",DEN:"#a44e20",DET:"#276f9a",GB:"#436149",HOU:"#5e2c3f",IND:"#34569b",JAX:"#26706b",KC:"#9c303b",LA:"#365fa1",LAC:"#246c9f",LV:"#4a5350",MIA:"#29847f",MIN:"#694b91",NE:"#314e7e",NO:"#8b7d4e",NYG:"#345a94",NYJ:"#2e6652",PHI:"#306862",PIT:"#8b7833",SEA:"#3e6581",SF:"#983f44",TB:"#9e3d36",TEN:"#4b708b",WAS:"#723d47"};
-const state = {season:null,week:null,weeks:[],games:[],calls:[],scope:"week",request:0,plotRows:[],analysisRequest:0,detailRequest:0,penalties:[],drives:[],metric:"penalty_epa",penaltyLimit:25,driveLimit:20,metricLabel:"Net penalty EPA for home team"};
+const state = {season:null,week:null,weeks:[],games:[],calls:[],scope:"week",request:0,plotRows:[],analysisRequest:0,detailRequest:0,penalties:[],drives:[],metric:"penalty_epa",penaltyLimit:25,driveLimit:20,metricLabel:"Expected margin shift for home team, ignores score"};
 
 async function get(path) {
   const response = await fetch(path, {cache:"no-cache"});
@@ -55,7 +59,7 @@ async function loadWeek() {
     $("#date-range").textContent = `${shortDate(period.start)} – ${shortDate(period.end)}`;
     $("#hero-week").textContent = `${state.season} / WEEK ${String(state.week).padStart(2,"0")}`;
     $("#hero-count").textContent = games.penalty_rows;
-    $("#hero-coverage").textContent = `${games.valued_penalties} known immediate effects · ${games.penalty_dispositions.declined || 0} declined · ${games.games.length} games`;
+    $("#hero-coverage").textContent = `${games.valued_penalties} priced${games.unpriced_penalties == null ? "" : ` · ${games.unpriced_penalties} unpriced`} · ${games.penalty_dispositions.declined || 0} declined · ${games.games.length} games`;
     $("#export").href = `/api/v1/export.csv?${query()}`;
     const previousTeam = $("#team").value;
     const teams = [...new Set(games.games.flatMap(g => [g.home_team,g.away_team]))].sort();
@@ -75,15 +79,17 @@ function renderGames() {
     const final = g.status === "final";
     const homeWin = final && g.home_score>g.away_score, awayWin=final && g.away_score>g.home_score;
     const epa = g.net_home_epa;
-    const progress = Math.max(4,Math.min(96,50 + (epa || 0) * 7));
-    const availability = !g.pbp_available ? "PBP pending" : !g.pbp_complete ? "Partial PBP" : `${g.valued_penalties ?? g.scored_calls}/${g.penalty_rows} effects known`;
+    const top = g.top_swings?.[0];
+    const biggest = top ? `${swingPP(top.home_wp_swing_pp)} · Q${top.qtr ?? "?"} ${top.time || ""}` : g.largest_call_swing_pp != null ? `${Math.round(g.largest_call_swing_pp)} pp` : "—";
+    const availability = !g.pbp_available ? "PBP pending" : !g.pbp_complete ? "Partial PBP" : `${g.valued_penalties ?? g.scored_calls} priced${g.unpriced_penalties == null ? "" : ` · ${g.unpriced_penalties} unpriced`}`;
     return `<button class="game-card" data-game="${escapeHTML(g.game_id)}" aria-label="Inspect ${escapeHTML(g.away_team)} at ${escapeHTML(g.home_team)}">
       <div class="card-top"><span>${escapeHTML(shortDate(g.gameday))} · ${escapeHTML(g.gametime || "TBD")} ET</span><span class="${final?"final-tag":""}">${final?"FINAL":g.status==="scheduled"?"UPCOMING":"PENDING"}</span></div>
       <div class="team-line ${homeWin?"loser":""}">${mark(g.away_team)}<span class="team-name">${escapeHTML(g.away_team)}</span><span class="score">${final?g.away_score:"—"}</span></div>
       <div class="team-line ${awayWin?"loser":""}">${mark(g.home_team)}<span class="team-name">${escapeHTML(g.home_team)}</span><span class="score">${final?g.home_score:"—"}</span></div>
-      <div class="net"><span>Est. penalty benefit · ${escapeHTML(g.home_team)}</span><span class="${colorClass(epa)}">${signed(epa)}</span></div>
-      <div class="card-production"><span>Observed offense EPA · ${escapeHTML(g.home_team)}</span><span>${signed(g.production?.[g.home_team]?.offensive_epa)}</span></div><div class="card-explanation">Offense already includes penalties. Benefits span both possessions.</div>
-      <div class="impact-track"><span class="impact-dot" style="left:${progress}%;background:${epa<0?"var(--purple)":"var(--lime)"}"></span></div>
+      <div class="net"><span>Biggest flag swing · ${escapeHTML(g.home_team)}</span><span class="${colorClass(top?.home_wp_swing_pp)}">${escapeHTML(biggest)}</span></div>
+      <div class="card-production"><span>Flag swings of 5+ pp</span><span>${g.swings_over_5pp ?? "needs data refresh"}</span></div>
+      <div class="card-production"><span>Expected margin shift, ignores score</span><span class="${colorClass(epa)}">${escapeHTML(g.home_team)} ${signed(epa)}</span></div>
+      <div class="card-production"><span>Observed offense EPA · ${escapeHTML(g.home_team)}</span><span>${signed(g.production?.[g.home_team]?.offensive_epa)}</span></div><div class="card-explanation">Swings are win chance at the moment of each flag. The margin shift counts blowout flags in full. Offense already includes penalties.</div>
       <div class="card-bottom"><span>${escapeHTML(availability)}</span><span>Inspect ↗</span></div></button>`;
   }).join("") : '<div class="empty">No games match this selection.</div>';
 }
@@ -96,8 +102,8 @@ async function loadAnalysis() {
     state.plotRows=data.points;state.metricLabel=data.metric_label;$("#plot-metric-label").textContent=state.metric.replaceAll("_"," ").toUpperCase()+" × FINAL MARGIN";$("#plot-caption").textContent="Right: a higher home-team metric. Up: a larger home win. Same-game production is descriptive accounting, not a causal penalty adjustment.";
     $("#correlation").textContent=data.pearson_r_margin==null?"N/A":signed(data.pearson_r_margin,2);
     $("#interval").textContent=data.bootstrap_95_interval?`95% exploratory interval: ${signed(data.bootstrap_95_interval[0],2)} to ${signed(data.bootstrap_95_interval[1],2)}`:"Not enough varied completed games to estimate a correlation.";
-    $("#win-rate").innerHTML=data.decisive_games_with_nonzero_impact?`The team with a higher ${state.metric === "penalty_epa" ? "measured penalty benefit" : "production metric"} won <span class="positive">${data.benefited_team_wins} of ${data.decisive_games_with_nonzero_impact}</span> games.`:"No completed games with a nonzero measured benefit yet.";
-    const coverage=data.penalty_rows?`${(100*data.scored_calls/data.penalty_rows).toFixed(0)}% of reported events have a known immediate effect.`:"No scored evidence available.";
+    $("#win-rate").innerHTML=data.decisive_games_with_nonzero_impact?`The team with a higher ${state.metric === "penalty_epa" ? "expected margin shift" : "production metric"} won <span class="positive">${data.benefited_team_wins} of ${data.decisive_games_with_nonzero_impact}</span> games.`:"No completed games with a nonzero measured benefit yet.";
+    const coverage=data.penalty_rows?`${(100*data.scored_calls/data.penalty_rows).toFixed(0)}% of reported flags are priced.`:"No scored evidence available.";
     $("#analysis-note").textContent=`${data.games} game-level observations · ${coverage} ${state.scope==="season"?"Season to date.":"Selected slate."}`;
     drawPlot(data.points);
   }catch(e){if(request===state.analysisRequest) error(e.message);}

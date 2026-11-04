@@ -119,9 +119,11 @@ def value_branch(
             if phase == "regulation_end" and branch.state.score_diff(team) != 0
             else None
         )
+        wp_vegas = wp if branch.state.home_spread is not None else None
     else:
         prediction = scorer.predict([effective], team)[0]
         ep, wp = prediction.ep, prediction.wp
+        wp_vegas = scorer.vegas_wp([effective], team)[0]
     baseline = scorer.predict([branch.state], team)[0]
     return {
         "id": branch.id,
@@ -132,6 +134,7 @@ def value_branch(
         "phase": phase,
         "ep": ep,
         "wp": wp,
+        "wp_vegas": wp_vegas,
         "wp_before": pre.wp,
         "wpa_pp": 100 * (wp - pre.wp) if wp is not None else None,
         "epa": points + ep - pre.ep,
@@ -146,6 +149,50 @@ def value_branch(
     }
 
 
+def downs_available(state: State, team: str) -> int:
+    """Snaps the team could still run this series. It has none while the other team has the ball."""
+    return 5 - state.down if state.possession == team else 0
+
+
+def opportunity(
+    scorer: Scorer, team: str, states: dict[str, State], baseline: str, result: str
+) -> dict:
+    """Downs in hand and next-score chances for named states, all in `team`'s frame.
+
+    Counting plays run would stop at the first score, so it reads a quick touchdown as less
+    opportunity. Downs in hand and the score chance they buy do not have that problem.
+    """
+    start = states[baseline].score_diff(team)
+    chances = scorer.next_score(list(states.values()), team)
+    rows = {
+        name: {
+            "possession": s.possession,
+            "down": s.down,
+            "ydstogo": s.ydstogo,
+            "yardline_100": s.yardline_100,
+            "downs_available": downs_available(s, team),
+            "points_scored": s.score_diff(team) - start,
+            "other": p["safety"] + p["opp_td"] + p["opp_fg"] + p["opp_safety"],
+            **{key: p[key] for key in ("td", "fg", "no_score")},
+        }
+        for (name, s), p in zip(states.items(), chances, strict=True)
+    }
+    return {
+        "team": team,
+        "states": rows,
+        "baseline": baseline,
+        "result": result,
+        # Only a team that had the ball can gain downs; after an erased score the count is moot.
+        "downs_gained": rows[result]["downs_available"] - rows[baseline]["downs_available"]
+        if states[baseline].possession == team
+        else None,
+        "td_change_pp": 100 * (rows[result]["td"] - rows[baseline]["td"]),
+        "fg_change_pp": 100 * (rows[result]["fg"] - rows[baseline]["fg"]),
+        "note": "Chances are the next score of the half from each state (EP model classes), "
+        "not this drive's result. Extra downs flip field goals into touchdowns.",
+    }
+
+
 def evaluate_decision(request: DecisionRequest, scorer: Scorer) -> dict:
     values = [
         value_branch(scorer, request.before, request.reference_team, branch)
@@ -157,6 +204,11 @@ def evaluate_decision(request: DecisionRequest, scorer: Scorer) -> dict:
         b["actual_minus_branch_wp_pp"] = (
             100 * (actual["wp"] - b["wp"])
             if actual["wp"] is not None and b["wp"] is not None
+            else None
+        )
+        b["actual_minus_branch_wp_vegas_pp"] = (
+            100 * (actual["wp_vegas"] - b["wp_vegas"])
+            if actual["wp_vegas"] is not None and b["wp_vegas"] is not None
             else None
         )
     timing = []
@@ -197,6 +249,8 @@ def evaluate_decision(request: DecisionRequest, scorer: Scorer) -> dict:
                         "alternative_label": b["label"],
                         "next_snap_delay_seconds": delay,
                         "actual_restart": a["restart"],
+                        "actual_phase": a["phase"],
+                        "alternative_phase": b["phase"],
                         "alternative_restart": b["restart"],
                         "conditional_clock_assumption": a["conditional_clock_assumption"]
                         or b["conditional_clock_assumption"],
@@ -206,6 +260,9 @@ def evaluate_decision(request: DecisionRequest, scorer: Scorer) -> dict:
                         "alternative_wpa_pp": b["wpa_pp"],
                         "actual_minus_branch_epa": a["epa"] - b["epa"],
                         "actual_minus_branch_wp_pp": swing,
+                        "actual_minus_branch_wp_vegas_pp": 100 * (a["wp_vegas"] - b["wp_vegas"])
+                        if a["wp_vegas"] is not None and b["wp_vegas"] is not None
+                        else None,
                         "additional_clock_epa": a["epa"]
                         - b["epa"]
                         - base["actual_minus_branch_epa"],

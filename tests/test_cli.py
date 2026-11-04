@@ -50,5 +50,5 @@ def test_compare_and_preview_cli(scorer, tmp_path):
     assert result.exit_code == 0, result.output
     result = CliRunner().invoke(app, ["publish", "--db", str(db)])
     assert result.exit_code == 0
-    assert "-1.1 pp" in result.output
+    assert "-1 pp" in result.output
     assert Path(db).is_file()

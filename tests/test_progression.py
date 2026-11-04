@@ -178,3 +178,30 @@ def test_game_start_marker_does_not_move_drive_start_before_opening_kickoff():
     assert game["initial_home_wp"] == 0.2
     assert drives[0]["wp_before"] == 0.4
     assert drives[0]["wp_change_pp"] == pytest.approx(2)
+
+
+def test_heat_describes_the_game_so_far_and_feeds_nothing():
+    rows = [
+        {"game_id": "2026_01_ARI_BUF", "season": 2026, "week": 1, "play_id": 1, "order_sequence": 1,
+         "home_team": "BUF", "away_team": "ARI", "posteam": "BUF", "play_type": "pass", "qtr": 1,
+         "down": 1, "epa": 2.0, "yards_gained": 25.0, "total_home_score": 0, "total_away_score": 0},
+        {"game_id": "2026_01_ARI_BUF", "season": 2026, "week": 1, "play_id": 2, "order_sequence": 2,
+         "home_team": "BUF", "away_team": "ARI", "posteam": "BUF", "play_type": "run", "qtr": 1,
+         "down": 1, "epa": 1.0, "yards_gained": 5.0, "total_home_score": 7, "total_away_score": 0},
+        {"game_id": "2026_01_ARI_BUF", "season": 2026, "week": 1, "play_id": 3, "order_sequence": 3,
+         "home_team": "BUF", "away_team": "ARI", "posteam": "ARI", "play_type": "run", "qtr": 1,
+         "down": 1, "epa": -0.5, "yards_gained": 12.0, "total_home_score": 7,
+         "total_away_score": 0},
+        {"game_id": "2026_01_ARI_BUF", "season": 2026, "week": 1, "play_id": 4, "order_sequence": 4,
+         "home_team": "BUF", "away_team": "ARI", "posteam": "BUF", "play_type": "pass", "qtr": 1,
+         "down": 1, "epa": 3.0, "yards_gained": 8.0, "total_home_score": 10,
+         "total_away_score": 0},
+    ]  # fmt: skip
+    frame = pl.DataFrame(rows, infer_schema_length=None)
+    timeline = build_progression(frame, [], [])["2026_01_ARI_BUF"]["timeline"]
+    heat = timeline[-1]["heat"]
+    assert heat["epa_last_5"] == {"BUF": 6.0, "ARI": -0.5}
+    assert heat["big_plays_last_10"] == {"BUF": 1, "ARI": 1}
+    assert heat["scoring_run"] == {"team": "BUF", "points": 10}
+    assert timeline[0]["cumulative_home_penalty_benefit_epa"] is None
+    assert "not a forecast" in build_progression(frame, [], [])["2026_01_ARI_BUF"]["heat_note"]
