@@ -1,0 +1,40 @@
+[project]
+name = "ref-impact"
+version = "0.4.0"
+description = "Estimate NFL ruling impact with nflfastR EP/WP models and publish to X"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "httpx>=0.28,<1",
+  "nflreadpy>=0.1",
+  "numpy>=2,<3",
+  "polars>=1,<2",
+  "pydantic>=2.10,<3",
+  "python-dotenv>=1,<2",
+  "tweepy>=4.14,<5",
+  "typer>=0.15,<1",
+  "uvicorn>=0.34,<1",
+  "xgboost>=3.0,<4",
+]
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "ruff>=0.11,<1"]
+
+[project.scripts]
+refimpact = "refimpact.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/refimpact"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

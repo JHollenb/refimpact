@@ -1,0 +1,120 @@
+{
+  "reference_team": "BUF",
+  "before": {
+    "away_score": 17,
+    "away_team": "ARI",
+    "away_timeouts": 3,
+    "down": 3,
+    "game_seconds_remaining": 100,
+    "half_seconds_remaining": 100,
+    "home_score": 3,
+    "home_team": "BUF",
+    "home_timeouts": 3,
+    "neutral_site": false,
+    "possession": "BUF",
+    "qtr": 4,
+    "roof": "outdoors",
+    "season": 2024,
+    "second_half_receiver": "BUF",
+    "yardline_100": 60,
+    "ydstogo": 5
+  },
+  "actual_branch": "decline",
+  "timing_delays": [
+    0,
+    10,
+    20
+  ],
+  "branches": [
+    {
+      "id": "decline",
+      "label": "Decline DPI; keep the 20-yard catch",
+      "state": {
+        "away_score": 17,
+        "away_team": "ARI",
+        "away_timeouts": 3,
+        "down": 1,
+        "game_seconds_remaining": 100,
+        "half_seconds_remaining": 100,
+        "home_score": 3,
+        "home_team": "BUF",
+        "home_timeouts": 3,
+        "neutral_site": false,
+        "possession": "BUF",
+        "qtr": 4,
+        "roof": "outdoors",
+        "season": 2024,
+        "second_half_receiver": "BUF",
+        "yardline_100": 40,
+        "ydstogo": 10
+      },
+      "clock": {
+        "restart": "snap"
+      },
+      "evidence": "manual",
+      "assumptions": [
+        "Hypothetical catch of 20 yards, no independent clock stoppage. Declined flag restarts on snap inside the last five minutes of Q4."
+      ]
+    },
+    {
+      "id": "accept",
+      "label": "Accept DPI at a supplied 15-yard foul spot",
+      "state": {
+        "away_score": 17,
+        "away_team": "ARI",
+        "away_timeouts": 3,
+        "down": 1,
+        "game_seconds_remaining": 100,
+        "half_seconds_remaining": 100,
+        "home_score": 3,
+        "home_team": "BUF",
+        "home_timeouts": 3,
+        "neutral_site": false,
+        "possession": "BUF",
+        "qtr": 4,
+        "roof": "outdoors",
+        "season": 2024,
+        "second_half_receiver": "BUF",
+        "yardline_100": 45,
+        "ydstogo": 10
+      },
+      "clock": {
+        "restart": "snap"
+      },
+      "evidence": "manual",
+      "assumptions": [
+        "Hypothetical documented foul spot is 15 yards downfield. Automatic first down. This is not inferred from catch yardage."
+      ]
+    },
+    {
+      "id": "no_flag",
+      "label": "No flag; keep the 20-yard inbounds catch",
+      "state": {
+        "away_score": 17,
+        "away_team": "ARI",
+        "away_timeouts": 3,
+        "down": 1,
+        "game_seconds_remaining": 100,
+        "half_seconds_remaining": 100,
+        "home_score": 3,
+        "home_team": "BUF",
+        "home_timeouts": 3,
+        "neutral_site": false,
+        "possession": "BUF",
+        "qtr": 4,
+        "roof": "outdoors",
+        "season": 2024,
+        "second_half_receiver": "BUF",
+        "yardline_100": 40,
+        "ydstogo": 10
+      },
+      "clock": {
+        "restart": "running"
+      },
+      "evidence": "manual",
+      "assumptions": [
+        "Hold the described catch fixed, with a running clock and no injury or timeout."
+      ]
+    }
+  ]
+}
