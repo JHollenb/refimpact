@@ -148,8 +148,8 @@ that check. Overtime is not modeled: a tied alternate final says so rather than 
 chance, overtime rows are not re-scored, and the alternate is compared with the regulation score.
 Kickoffs and tries have no scrimmage state, so the alternate line carries its last value across
 them. A blank state gets a win chance with no timeline. `drive_team` names who a drive result
-belongs to; the dashboard defaults to the team that ran the play, and the API warns when its
-default gives the result to the next team.
+belongs to; the dashboard and API default to the team with the ball in the edited state, and
+warn when that differs from the team that ran the play.
 
 **Stacking: a prediction timeline.** Each alternate point has a **What if from here?** button. It
 opens a step prefilled from the alternate state: after a score, the other team's ball at the
