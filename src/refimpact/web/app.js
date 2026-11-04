@@ -23,11 +23,7 @@ function error(message) {
   $("#error").classList.toggle("hidden", !message);
 }
 function query() { return `season=${state.season}&week=${state.week}`; }
-function clock(c) {
-  const s = c.comparison.before;
-  const seconds = Math.floor(s.half_seconds_remaining) - ([1,3].includes(s.qtr) ? 900 : 0);
-  return `Q${s.qtr} ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2,"0")}`;
-}
+function clock(c) { return stateClock(c.comparison.before); }
 function mark(team) { return `<span class="team-mark" style="--team:${colors[team] || "#34493d"}">${escapeHTML(team)}</span>`; }
 
 async function init() {
@@ -59,7 +55,8 @@ async function loadWeek() {
     $("#date-range").textContent = `${shortDate(period.start)} – ${shortDate(period.end)}`;
     $("#hero-week").textContent = `${state.season} / WEEK ${String(state.week).padStart(2,"0")}`;
     $("#hero-count").textContent = games.penalty_rows;
-    $("#hero-coverage").textContent = `${games.valued_penalties} priced${games.unpriced_penalties == null ? "" : ` · ${games.unpriced_penalties} unpriced`} · ${games.penalty_dispositions.declined || 0} declined · ${games.games.length} games`;
+    const pricedShare = games.flags_took_effect ? ` (${Math.round(100*games.valued_penalties/games.flags_took_effect)}% of flags that took effect)` : "";
+    $("#hero-coverage").textContent = `${games.valued_penalties} priced${pricedShare}${games.unpriced_penalties == null ? "" : ` · ${games.unpriced_penalties} unpriced`} · ${games.penalty_dispositions.declined || 0} declined · ${games.games.length} games`;
     $("#export").href = `/api/v1/export.csv?${query()}`;
     const previousTeam = $("#team").value;
     const teams = [...new Set(games.games.flatMap(g => [g.home_team,g.away_team]))].sort();
@@ -103,7 +100,7 @@ async function loadAnalysis() {
     $("#correlation").textContent=data.pearson_r_margin==null?"N/A":signed(data.pearson_r_margin,2);
     $("#interval").textContent=data.bootstrap_95_interval?`95% exploratory interval: ${signed(data.bootstrap_95_interval[0],2)} to ${signed(data.bootstrap_95_interval[1],2)}`:"Not enough varied completed games to estimate a correlation.";
     $("#win-rate").innerHTML=data.decisive_games_with_nonzero_impact?`The team with a higher ${state.metric === "penalty_epa" ? "expected margin shift" : "production metric"} won <span class="positive">${data.benefited_team_wins} of ${data.decisive_games_with_nonzero_impact}</span> games.`:"No completed games with a nonzero measured benefit yet.";
-    const coverage=data.penalty_rows?`${(100*data.scored_calls/data.penalty_rows).toFixed(0)}% of reported flags are priced.`:"No scored evidence available.";
+    const coverage=data.flags_took_effect?`${Math.round(100*data.scored_calls/data.flags_took_effect)}% of flags that took effect are priced.`:"No scored evidence available.";
     $("#analysis-note").textContent=`${data.games} game-level observations · ${coverage} ${state.scope==="season"?"Season to date.":"Selected slate."}`;
     drawPlot(data.points);
   }catch(e){if(request===state.analysisRequest) error(e.message);}

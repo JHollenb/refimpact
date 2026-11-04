@@ -20,6 +20,7 @@ from refimpact.decisions import DecisionRequest, evaluate_decision
 from refimpact.models import MODEL_ID, Scorer
 from refimpact.pipeline import code_digest, execute_transform, request_transform
 from refimpact.scenarios import (
+    ChainError,
     ScenarioRequest,
     ScenarioSave,
     ScenarioStore,
@@ -28,6 +29,7 @@ from refimpact.scenarios import (
     game_rows,
     read_state,
     scenario_plays,
+    season_kick_spot,
 )
 from refimpact.schema import Comparison, Record, State
 from refimpact.storage import DATA_TABLES, DEFAULT_DATABASE, Database
@@ -87,6 +89,7 @@ def create_app(
     numerical_code = code_digest()
     scorer = None
     score_lock = threading.Lock()
+    kick_spots: dict[str, float | None] = {}
 
     @app.middleware("http")
     async def revision_cache(request, call_next):
@@ -183,6 +186,8 @@ def create_app(
             "priced.",
             "automatic_penalties": "All reported dispositions, including flags with penalty=0; "
             "accept/decline/no-flag states are valued where recoverable.",
+            "coverage": "Priced flags over flags that took effect; a declined flag has no effect "
+            "to price.",
             "alternative": "Hold described play result fixed; missing foul spots become labeled "
             "scenarios. Runoffs and next-snap timing are separate interventions.",
             "clock": "Apply reported ten-second runoffs once; a timeout alternative consumes a "
@@ -232,6 +237,9 @@ def create_app(
             "review_calls": sum(g["review_calls"] for g in rows),
             "valued_penalties": sum(g.get("valued_penalties", g["scored_calls"]) for g in rows),
             "unpriced_penalties": sum(g.get("unpriced_penalties") or 0 for g in rows),
+            "flags_took_effect": sum(
+                g.get("penalty_coverage", {}).get("took_effect", 0) for g in rows
+            ),
             "penalty_dispositions": {
                 name: sum(
                     g.get("penalty_coverage", {}).get("dispositions", {}).get(name, 0) for g in rows
@@ -541,12 +549,17 @@ def create_app(
         except LookupError as exc:
             raise HTTPException(404, str(exc)) from None
 
-    def score_scenario(body: ScenarioRequest, rows: list[dict]) -> dict:
+    def score_scenario(body: ScenarioRequest, rows: list[dict], source_id: str) -> dict:
         nonlocal scorer
         with score_lock:
             try:
                 scorer = scorer or Scorer(models_path)
-                return evaluate_scenario(rows, body, scorer)
+                if source_id not in kick_spots:
+                    kick_spots[source_id] = season_kick_spot(database, source_id)
+                return evaluate_scenario(rows, body, scorer, kick_spots[source_id])
+            except ChainError as exc:
+                # Same shape as request validation, so the form reports the field either way.
+                raise HTTPException(422, [{"loc": ["body", *exc.loc], "msg": str(exc)}]) from None
             except (ValueError, OSError) as exc:
                 raise HTTPException(422, str(exc)) from None
 
@@ -561,7 +574,7 @@ def create_app(
 
     @app.post("/api/v1/scenarios/evaluate")
     def evaluate(body: ScenarioRequest):
-        return score_scenario(body, stored_game(body.game_id)[0])
+        return score_scenario(body, *stored_game(body.game_id))
 
     @app.post("/api/v1/scenarios/state")
     def blank_state(body: State):
@@ -585,7 +598,8 @@ def create_app(
     def save_scenario(body: ScenarioSave, request: Request):
         local_only(request)
         rows, source_id = stored_game(body.game_id)
-        return scenarios.save(body, score_scenario(body, rows), source_id, numerical_code)
+        result = score_scenario(body, rows, source_id)
+        return scenarios.save(body, result, source_id, numerical_code)
 
     @app.get("/api/v1/scenarios/{scenario_id}")
     def saved_scenario(scenario_id: str):

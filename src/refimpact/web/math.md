@@ -183,12 +183,41 @@ opponent the spot of the kick (line of scrimmage plus eight) or its own 20 if th
 out. A kickoff row has no scrimmage pre-state, so it compares the next recorded snap with the
 written return, using that snap's clock and timeouts for both; the shared before-state is the
 no-flag branch. A single written fumble recovery, with any return, gives possession and spot.
-Muffs, blocks, laterals, multiple turnovers, onside kicks and safeties remain unpriced.
+A single muff, or a single recovery of a blocked kick, works the same way. A fumble out of bounds
+stays with the offense at whichever is farther from the goal, the spot of the fumble or the
+inbounds spot (Rule 8-7). An interception fumbled back to the offense is a new series. A lateral
+carry ends at the last written spot. A spike uses the down.
 
-Every remaining unpriced flag carries an `unpriced_reason`: overtime, tries, kick-rule placements
-with no foul-free result, scores that stood, feeds that do not describe the play, unidentified
-fouls, or ambiguous kick and turnover sequences. Across 2024 and 2026, 5,537 flags took effect;
-338 (6%) remain unpriced, down from 1,051 (19%).
+**Kick placements.** A kickoff out of bounds or short of the landing zone is placed by rule, so the
+feed has no foul-free result. It is compared with a kick kept in play: the receiver's first down at
+`s_kick`. Onside kicks, offsetting placements and illegal touches stay unpriced.
+
+**Tries.** A try has no scrimmage state, so both sides are read after the next kick, at the row's
+clock, with the opponent at `s_kick`. When a written result is erased and the try is run again,
+
+\[
+EPA_T = r\,V(\text{points made}) + (1-r)\,V(0) - V(\text{points written}),
+\]
+
+where `V` is margin plus EP (or WP), and `r` is the season's measured rate for the kind of try that
+followed. Distance is not separated: a re-try from 10 yards farther or half the distance uses the
+same rate, and the label says so. A try that stood with enforcement between downs, and a foul with
+no try written, stay unpriced.
+
+**No written action.** A no-play row with nothing written before the flag has no snap to erase, so
+the foul-free state is the same down, not yet played. Checked against the next recorded snap on the
+63 such flags: 62 show the same down or a first down with the yard line moved by the reported
+yards. The other's next row is a timeout, so there is nothing to compare. A row that also mentions
+an injury or lacks a pre-state stays unpriced.
+
+**Safeties.** A safety enforced on the offense is the next recorded snap, with two points added to
+the defense. A safety that was nullified stays unpriced.
+
+Every remaining unpriced flag carries an `unpriced_reason`: overtime, tries with no written result,
+onside or offsetting placements, scores that stood, feeds that do not describe the play, text that
+names no foul, or ambiguous kick and turnover sequences. Across 2024 and 2026, 5,537 flags took
+effect. 165 (3%) remain unpriced, down from 1,051 (19%). A declined flag has no effect to price, so
+coverage is 97% of flags that took effect, not a share of all reported flags.
 
 The signed choice edge is `EPA(actual option)-EPA(other option)` and likewise for
 WPA. It is not an assertion that the selected option was optimal. Multiple fouls on
@@ -414,6 +443,18 @@ An edit replaces the state recorded after a play. At the moment, `win-chance swi
 A drive result then ends the edited drive with `home score at rejoin = entered home score + points if home has the ball`, and likewise for away. Every later row uses its recorded pre-snap state with `score shift = alternate score at rejoin - recorded score at the end of that drive`. Nothing else about later rows changes, so the alternate line is hindsight accounting and not a forecast. Rows without a scrimmage state carry the last alternate value. The final row is 100% or 0% for a decided margin and unknown for a tie, because overtime is not modeled.
 
 A drive result belongs to the team named in the edit. The dashboard defaults to the team that ran the play. The API defaults to the team with the ball in the entered state and warns when that differs, because on a drive's last play it is the next team, whose real drive still happens. In an overtime game the alternate stays regulation-only: `final.actual_regulation` gives the matching actual score and the last row ends at the decided alternate result. A play with no later snap in its half starts from its own pre-snap state and says so. At the edit point the chart's actual line reads the same post-play state as the card, so the gap is the same number.
+
+### Stacked what-ifs
+
+A chain continues from an alternate state with states you author. Each node `n` has a state `s_n`, chosen by you, and an optional drive result. After a scoring result the next prefill is the other team's first down at `s_kick` with the points on the board. After no score it is the other team's ball at the same spot. Every node reads the same pinned models:
+
+\[
+WP(s_n),\ WP_{Vegas}(s_n),\ EP(s_n),\qquad swing_n = 100\,(WP(s_n)-WP(s_{n-1})).
+\]
+
+A step's clock cannot run backward, a score cannot fall below the previous node plus its drive result, timeouts stay in range, and quarters 1-2 and 3-4 keep the half's second-half receiver. Overtime is refused. Nothing is computed for the chance of reaching a node: steps are choices, not forecasts, and swings are not added. A zero-change branch reads exactly the state it came from.
+
+There are two endings. **Prediction** (the default) ends at the last node, has no final score, and reads as "the model's win chance if the game got here". **Rejoin** holds recorded plays from a later play, with scores shifted by the difference at that point, and is labeled hindsight. The two never mix. Chains are left out of the disputed-calls report and are never posted.
 
 The disputed-calls report sums points swings as `home_sum_at_moment_expected_points`. That is a sum of at-the-moment expected points, not a final margin: expected points estimate the next score of the half, and later plays would have changed. Win-chance swings are never added.
 

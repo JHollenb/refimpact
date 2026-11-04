@@ -11,7 +11,9 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from refimpact.api import create_app
+from refimpact.models import features
 from refimpact.scenarios import (
+    ChainError,
     ScenarioRequest,
     ScenarioSave,
     disputed_report,
@@ -244,9 +246,9 @@ def test_drive_result_on_a_final_play_warns_and_can_name_the_team(rows, scorer):
     named = run(rows, scorer, edit | {"drive_team": final["posteam"]})["edits"][0]
     assert named["drive_team"] == final["posteam"] and not named["warnings"]
     side = "home" if final["posteam"] == "SEA" else "away"
-    assert named["alternate_drive_end_score"][side] == named["alternate"]["state"][
-        f"{side}_score"
-    ] + 7
+    assert (
+        named["alternate_drive_end_score"][side] == named["alternate"]["state"][f"{side}_score"] + 7
+    )
     with pytest.raises(ValueError, match="not in this game"):
         run(rows, scorer, edit | {"drive_team": "GB"})
 
@@ -373,9 +375,7 @@ SAVE = {
 def test_api_prefills_and_evaluates_without_saving(local):
     plays = local.get("/api/v1/scenarios/plays", params={"game_id": GAME}).json()
     assert any(p["play_id"] == "2895" for p in plays["plays"])
-    result = local.post(
-        "/api/v1/scenarios/evaluate", json={"game_id": GAME, "edits": [OPI]}
-    ).json()
+    result = local.post("/api/v1/scenarios/evaluate", json={"game_id": GAME, "edits": [OPI]}).json()
     assert result["edits"][0]["wp_swing_pp"] == pytest.approx(8.4, abs=0.1)
     assert "ruling correctness not assessed" in result["note"]
     assert local.get("/api/v1/scenarios", params={"game_id": GAME}).json()["scenarios"] == []
@@ -428,4 +428,381 @@ def test_saving_never_touches_source_rows_or_the_tweet_queue(stored, local):
     local.post("/api/v1/scenarios", json=SAVE)
     after, tables = read()
     assert after == before and "scenarios" in tables
+    assert not any("outbox" in name or name == "posts" for name in tables)
+
+
+# A chain: the disputed OPI stands as a touchdown, then steps the user authors.
+KICK_SPOT = 69.0
+TD_EDIT = OPI | {"drive_result": "td_xp"}
+AFTER_KICK = {
+    "possession": "CHI", "down": 1, "ydstogo": 10, "yardline_100": KICK_SPOT, "qtr": 4,
+    "quarter_seconds": 900, "home_score": 16, "away_score": 20, "home_timeouts": 3,
+    "away_timeouts": 3, "drive_result": "none",
+}  # fmt: skip
+SEA_BALL = AFTER_KICK | {
+    "possession": "SEA", "yardline_100": 65, "quarter_seconds": 750, "drive_result": None,
+}  # fmt: skip
+
+
+def chained(rows, scorer, steps, edits=(TD_EDIT,), from_play="2895", **end):
+    request = ScenarioRequest(
+        game_id=GAME,
+        edits=list(edits),
+        chain={"from_play_id": from_play, "steps": steps} | end,
+    )
+    return evaluate_scenario(rows, request, scorer, KICK_SPOT)
+
+
+def state_of(node, **changes):
+    fields = {k: v for k, v in node["state"].items() if k != "quarter_seconds"}
+    return State(**fields | changes)
+
+
+def test_edit_prefills_the_next_step_from_the_alternate_after_the_kick(rows, scorer):
+    # Which team, what score and where: the opponent, on the shifted board, at the kick spot.
+    edit = evaluate_scenario(
+        rows, ScenarioRequest(game_id=GAME, edits=[TD_EDIT]), scorer, KICK_SPOT
+    )["edits"][0]
+    filled = edit["next_state"]
+    assert filled["possession"] == "CHI"
+    assert (filled["home_score"], filled["away_score"]) == (16, 20)
+    assert (filled["down"], filled["ydstogo"], filled["yardline_100"]) == (1, 10, KICK_SPOT)
+    assert filled["qtr"] == edit["alternate"]["state"]["qtr"]
+    assert filled["quarter_seconds"] == edit["alternate"]["state"]["quarter_seconds"]
+    # The board is the alternate's, not the recorded row's.
+    assert edit["actual"]["state"]["home_score"] == 9
+
+
+def test_later_alternate_points_offer_their_own_shifted_state(rows, scorer):
+    result = run(rows, scorer, TD_EDIT)
+    held = point(result, "3410")
+    assert held["status"] == "modeled"
+    # The touchdown moves the board at that later snap and nothing else about it.
+    assert held["alternate_state"]["home_score"] == held["actual_home_score"] + 7
+    assert held["alternate_state"]["away_score"] == held["actual_away_score"]
+    assert held["alternate_state"]["possession"] == held["possession"]
+
+
+def test_field_goal_and_no_score_prefills(rows, scorer):
+    filled = chained(rows, scorer, [AFTER_KICK | {"drive_result": "fg"}])
+    after = filled["chain"]["nodes"][-1]["next_state"]
+    assert (after["possession"], after["away_score"], after["yardline_100"]) == ("SEA", 23, 69)
+    filled = chained(rows, scorer, [AFTER_KICK])
+    after = filled["chain"]["nodes"][-1]["next_state"]
+    # No punt is assumed: the other team's ball at the same spot, on an unchanged board.
+    assert (after["possession"], after["yardline_100"], after["away_score"]) == ("SEA", 31, 20)
+    assert (after["down"], after["ydstogo"]) == (1, 10)
+    open_drive = chained(rows, scorer, [AFTER_KICK | {"drive_result": None}])
+    after = open_drive["chain"]["nodes"][-1]["next_state"]
+    assert (after["possession"], after["yardline_100"]) == ("CHI", 69)
+
+
+def test_zero_change_branch_reproduces_the_source_node(rows, scorer):
+    # From an edit with no drive result, and from a held later snap.
+    moment = run(rows, scorer, OPI)["edits"][0]
+    same = moment["next_state"] | {"drive_result": None}
+    nodes = chained(rows, scorer, [same], edits=(OPI,))["chain"]["nodes"]
+    for key in ("home_wp", "home_wp_vegas", "home_ep", "home_value", "opportunity"):
+        assert nodes[1][key] == nodes[0][key], key
+    assert nodes[0]["home_wp"] == moment["alternate"]["home_wp"]
+    assert nodes[1]["wp_swing_pp"] == 0 and nodes[1]["points_swing"] == 0
+
+    held = point(run(rows, scorer, TD_EDIT), "3410")
+    nodes = chained(rows, scorer, [held["alternate_state"]], from_play="3410")["chain"]["nodes"]
+    assert nodes[0]["home_wp"] == nodes[1]["home_wp"] == held["alternate_home_wp"]
+    assert nodes[0]["home_wp_vegas"] == nodes[1]["home_wp_vegas"]
+    assert nodes[0]["kind"] == "modeled"
+
+
+def test_fixed_chain_matches_direct_model_calls(rows, scorer):
+    result = chained(rows, scorer, [AFTER_KICK, SEA_BALL])
+    nodes = result["chain"]["nodes"]
+    assert [n["state"]["possession"] for n in nodes] == ["SEA", "CHI", "SEA"]
+    assert [n["kind"] for n in nodes] == ["edit", "step", "step"]
+    assert nodes[0]["score_after"] == {"home": 16, "away": 20}
+    assert nodes[0]["next_state"]["possession"] == "CHI"
+    context = state_of(nodes[0])
+    direct = [
+        context.model_copy(update=changes)
+        for changes in (
+            {},
+            {"possession": "CHI", "down": 1, "ydstogo": 10.0, "yardline_100": 69.0,
+             "home_score": 16},
+            {"possession": "SEA", "down": 1, "ydstogo": 10.0, "yardline_100": 65.0,
+             "home_score": 16, "game_seconds_remaining": 750.0, "half_seconds_remaining": 750.0},
+        )
+    ]  # fmt: skip
+    for node, state in zip(nodes, direct, strict=True):
+        assert node["home_wp"] == scorer.predict([state], "SEA")[0].wp
+        assert node["home_ep"] == scorer.predict([state], "SEA")[0].ep
+        assert node["home_wp_vegas"] == scorer.vegas_wp([state], "SEA")[0]
+        chance = scorer.next_score([state], state.possession)[0]
+        assert node["opportunity"]["td"] == chance["td"]
+        assert node["opportunity"]["fg"] == chance["fg"]
+        assert node["opportunity"]["team"] == state.possession
+    assert nodes[1]["opportunity"]["downs_available"] == 4
+    assert nodes[1]["wp_swing_pp"] == 100 * (nodes[1]["home_wp"] - nodes[0]["home_wp"])
+    assert nodes[0]["wp_swing_pp"] is None
+
+
+def test_popping_back_and_continuing_replaces_only_the_tail(rows, scorer):
+    first = chained(rows, scorer, [AFTER_KICK, SEA_BALL])["chain"]["nodes"]
+    other = SEA_BALL | {"yardline_100": 40, "quarter_seconds": 500}
+    second = chained(rows, scorer, [AFTER_KICK, other])["chain"]["nodes"]
+    assert len(second) == len(first)
+    assert second[:2] == first[:2]
+    assert second[2]["state"]["yardline_100"] == 40
+    assert second[2]["home_wp"] != first[2]["home_wp"]
+    # Popped to the first step: the path ends there, with nothing kept from the old tail.
+    popped = chained(rows, scorer, [AFTER_KICK])["chain"]["nodes"]
+    assert popped == first[:2]
+
+
+def test_prediction_ends_at_the_last_node_with_no_final_score(rows, scorer):
+    result = chained(rows, scorer, [AFTER_KICK, SEA_BALL])
+    assert result["final"]["alternate"] is None
+    end = result["chain"]["end"]
+    assert end["mode"] == "prediction"
+    assert end["score"] == {"home": 16, "away": 20}
+    assert end["home_wp"] == result["chain"]["nodes"][-1]["home_wp"]
+    assert "Conditional" in end["label"] and not end["reads_before_drive_result"]
+    assert "not a forecast" in result["note"]
+    assert "held as played" not in result["note"]
+    assert not any(k in end for k in ("probability", "path_probability"))
+    later = result["timeline"][-1]
+    assert later["status"] == "branched" and later["alternate_home_wp"] is None
+    assert later["actual_home_wp"] is not None
+    # Recorded plays after the branch stay drawn, with nothing alternate on them.
+    assert all(
+        p["alternate_home_wp"] is None and p["alternate_state"] is None
+        for p in result["timeline"]
+        if p["status"] == "branched"
+    )
+    # A drive result on the last node moves the score but not the reading, and says so.
+    last = chained(rows, scorer, [AFTER_KICK | {"drive_result": "td_xp"}])["chain"]["end"]
+    assert last["score"] == {"home": 16, "away": 27} and last["reads_before_drive_result"]
+
+
+def test_rejoin_holds_recorded_plays_labeled_hindsight(rows, scorer):
+    result = chained(rows, scorer, [AFTER_KICK, SEA_BALL], end="rejoin", rejoin_play_id="3410")
+    assert result["chain"]["end"]["mode"] == "rejoin"
+    assert "Hindsight" in result["chain"]["end"]["label"]
+    assert result["final"]["alternate"]["mode"] == "rejoin"
+    assert "hindsight" in result["note"]
+    # The steps replace the recorded plays up to the rejoin, including SEA's real score there.
+    held = point(result, "3410")
+    assert held["status"] == "modeled"
+    assert (held["alternate_home_score"], held["alternate_away_score"]) == (16, 20)
+    assert point(result, "3273")["status"] == "replaced"
+    assert point(result, "3273")["alternate_home_wp"] is None
+    assert result["final"]["alternate"]["home"] == 16 and result["final"]["alternate"]["away"] == 34
+    rejoined = held["alternate_state"]
+    assert rejoined["possession"] == held["possession"] and rejoined["home_score"] == 16
+    # A score in the chain carries into everything held after it.
+    scored = chained(
+        rows, scorer, [AFTER_KICK | {"drive_result": "fg"}], end="rejoin", rejoin_play_id="3410"
+    )
+    assert scored["final"]["alternate"]["away"] == 37
+    assert scored["chain"]["end"]["score_at_rejoin"] == {"home": 16, "away": 23}
+    assert "resume with CHI" in result["chain"]["warnings"][0]
+    agrees = chained(rows, scorer, [AFTER_KICK | {"drive_result": None}], end="rejoin",
+                     rejoin_play_id="3410")  # fmt: skip
+    assert not agrees["chain"]["warnings"]
+
+
+def test_a_chain_cannot_mix_its_endings():
+    base = {"from_play_id": "2895", "steps": [AFTER_KICK]}
+    with pytest.raises(ValidationError, match="cannot also rejoin"):
+        ScenarioRequest(game_id=GAME, edits=[TD_EDIT], chain=base | {"rejoin_play_id": "3410"})
+    with pytest.raises(ValidationError, match="needs a play to rejoin"):
+        ScenarioRequest(game_id=GAME, edits=[TD_EDIT], chain=base | {"end": "rejoin"})
+
+
+@pytest.mark.parametrize(
+    ("steps", "field", "message"),
+    [
+        ([AFTER_KICK, SEA_BALL | {"quarter_seconds": 800}, AFTER_KICK | {"quarter_seconds": 850}],
+         ("steps", 2, "quarter_seconds"), "cannot run backward"),
+        ([AFTER_KICK | {"qtr": 3, "quarter_seconds": 100}],
+         ("steps", 0, "quarter_seconds"), "cannot run backward"),
+        ([AFTER_KICK | {"quarter_seconds": 0}], ("steps", 0, "quarter_seconds"), "no time left"),
+        ([AFTER_KICK | {"home_score": 9}], ("steps", 0, "home_score"), "cannot fall below 16"),
+        ([AFTER_KICK | {"drive_result": "td_xp"}, SEA_BALL],
+         ("steps", 1, "away_score"), "cannot fall below 27"),
+        ([AFTER_KICK, SEA_BALL | {"home_timeouts": 2},
+          SEA_BALL | {"home_timeouts": 3}], ("steps", 2, "home_timeouts"), "regain a timeout"),
+        ([AFTER_KICK | {"ydstogo": 80}], ("steps", 0, "ydstogo"), "distance to gain"),
+        ([AFTER_KICK | {"possession": "GB"}], ("steps", 0, "possession"), "possession"),
+        ([AFTER_KICK | {"drive_team": "GB", "drive_result": "fg"}],
+         ("steps", 0, "drive_team"), "not in this game"),
+    ],
+)  # fmt: skip
+def test_impossible_steps_name_the_field(rows, scorer, steps, field, message):
+    with pytest.raises(ChainError, match=message) as caught:
+        chained(rows, scorer, steps)
+    assert caught.value.loc == ("chain", *field)
+
+
+def test_overtime_step_is_rejected_with_a_clear_message():
+    with pytest.raises(ValidationError, match="Overtime is not modeled") as caught:
+        ScenarioRequest(
+            game_id=GAME,
+            edits=[TD_EDIT],
+            chain={"from_play_id": "2895", "steps": [AFTER_KICK | {"qtr": 5}]},
+        )
+    assert caught.value.errors()[0]["loc"][-1] == "qtr"
+
+
+@pytest.mark.parametrize("start", ["2148", "9999"])
+def test_chain_must_start_on_the_alternate_timeline_after_the_last_edit(rows, scorer, start):
+    with pytest.raises(ChainError, match="not a state on the alternate timeline"):
+        chained(rows, scorer, [AFTER_KICK], from_play=start)
+
+
+def test_rejoin_play_must_follow_the_chain(rows, scorer):
+    with pytest.raises(ChainError, match="after the chain's start") as caught:
+        chained(rows, scorer, [AFTER_KICK], end="rejoin", rejoin_play_id="2148")
+    assert caught.value.loc == ("chain", "rejoin_play_id")
+    with pytest.raises(ChainError, match="comes before the last step"):
+        chained(
+            rows,
+            scorer,
+            [AFTER_KICK | {"quarter_seconds": 10}],
+            end="rejoin",
+            rejoin_play_id="3410",
+        )
+
+
+def first_half_play(rows):
+    return next(
+        p for p in scenario_plays(rows)["plays"] if p["qtr"] == 1 and p["default"]["qtr"] == 1
+    )
+
+
+def test_second_half_receiver_on_hypothetical_second_half_states(rows, scorer):
+    play = first_half_play(rows)
+    edit = {"play_id": play["play_id"], "changes": {}}
+    source = play["default"]
+    receiver = source["second_half_receiver"]
+    other = "CHI" if receiver == "SEA" else "SEA"
+    fields = {k: source[k] for k in (
+        "down", "ydstogo", "yardline_100", "home_score", "away_score", "home_timeouts",
+        "away_timeouts",
+    )}  # fmt: skip
+    q2 = fields | {"possession": receiver, "qtr": 2, "quarter_seconds": 300}
+    # The receiver's first-half bonus is on in Q2 and gone after the half; timeouts come back.
+    q3 = fields | {"possession": receiver, "qtr": 3, "quarter_seconds": 900, "home_timeouts": 3,
+                   "away_timeouts": 3}  # fmt: skip
+    nodes = chained(rows, scorer, [q2, q3], edits=(edit,), from_play=play["play_id"])["chain"][
+        "nodes"
+    ]
+    second = state_of(nodes[2])
+    assert second.second_half_receiver == receiver
+    first = state_of(nodes[1])
+    assert first.second_half_receiver == receiver
+    assert features(first)[1][0] == 1 and features(second)[1][0] == 0
+    assert features(first.model_copy(update={"possession": other}))[1][0] == 0
+    assert nodes[2]["home_wp"] == scorer.predict([second], first.home_team)[0].wp
+
+
+def test_chain_api_reports_a_field_error_and_round_trips(local):
+    chain = {"from_play_id": "2895", "steps": [AFTER_KICK, SEA_BALL]}
+    body = {"game_id": GAME, "edits": [TD_EDIT]}
+    bad = local.post(
+        "/api/v1/scenarios/evaluate",
+        json=body | {"chain": chain | {"steps": [AFTER_KICK | {"home_score": 9}]}},
+    )
+    assert bad.status_code == 422
+    assert bad.json()["detail"][0]["loc"] == ["body", "chain", "steps", 0, "home_score"]
+    assert "cannot fall below" in bad.json()["detail"][0]["msg"]
+    extra = local.post(
+        "/api/v1/scenarios/evaluate",
+        json=body | {"chain": chain | {"steps": [AFTER_KICK | {"qtr": 5}]}},
+    )
+    assert "Overtime is not modeled" in extra.json()["detail"][0]["msg"]
+
+    evaluated = local.post("/api/v1/scenarios/evaluate", json=body | {"chain": chain})
+    assert evaluated.status_code == 200
+    # Without the kick spot supplied, the API measures one from the stored source.
+    assert evaluated.json()["chain"]["kick_spot"] is not None
+
+    saved = local.post("/api/v1/scenarios", json=body | {"chain": chain, "label": "Stop then ball"})
+    assert saved.status_code == 201
+    record = local.get(f"/api/v1/scenarios/{saved.json()['scenario_id']}").json()
+    assert record["request"]["chain"]["steps"][1]["possession"] == "SEA"
+    assert record["result"]["chain"]["nodes"][2]["state"]["possession"] == "SEA"
+    again = local.post(
+        "/api/v1/scenarios/evaluate",
+        json={"game_id": GAME, "edits": record["request"]["edits"],
+              "chain": record["request"]["chain"]},
+    ).json()  # fmt: skip
+    assert again["chain"]["nodes"] == record["result"]["chain"]["nodes"]
+
+
+def test_old_saved_scenarios_still_load_and_rerun(stored, local):
+    saved = local.post("/api/v1/scenarios", json=SAVE).json()
+    # A record from before chains: its request has no chain key.
+    old = {"game_id": GAME, "edits": saved["request"]["edits"]}
+    with Database(stored).connect() as db:
+        db.execute(
+            "UPDATE scenarios SET request=? WHERE scenario_id=?",
+            (json.dumps(old), saved["scenario_id"]),
+        )
+    record = local.get(f"/api/v1/scenarios/{saved['scenario_id']}").json()
+    assert "chain" not in record["request"]
+    again = local.post("/api/v1/scenarios/evaluate", json=record["request"])
+    assert again.status_code == 200
+    assert "chain" not in again.json()
+    report = local.get("/api/v1/scenarios/disputes", params={"game_id": GAME}).json()
+    assert len(report["calls"]) == 1
+
+
+def test_chains_stay_out_of_the_disputes_report(local):
+    chain = {"from_play_id": "2895", "steps": [AFTER_KICK]}
+    refused = local.post("/api/v1/scenarios", json=SAVE | {"chain": chain})
+    assert refused.status_code == 422
+    assert "not a disputed call" in refused.text
+    assert (
+        local.post(
+            "/api/v1/scenarios", json=SAVE | {"chain": chain, "disputed": False, "label": "Chain"}
+        ).status_code
+        == 201
+    )
+    report = local.get("/api/v1/scenarios/disputes", params={"game_id": GAME}).json()
+    assert report["calls"] == []
+    # A record marked disputed some other way still does not reach it.
+    assert (
+        disputed_report(
+            [{"disputed": True, "request": {"chain": chain}, "created_at": "1"}], GAME, "s"
+        )["calls"]
+        == []
+    )
+
+
+def test_lan_clients_can_evaluate_a_chain_but_not_save_it(stored, local):
+    chain = {"from_play_id": "2895", "steps": [AFTER_KICK]}
+    body = {"game_id": GAME, "edits": [TD_EDIT], "chain": chain}
+    with TestClient(create_app(stored), client=("192.168.1.20", 50000)) as lan:
+        assert lan.post("/api/v1/scenarios/evaluate", json=body).status_code == 200
+        assert lan.post("/api/v1/scenarios", json=body | {"label": "x"}).status_code == 403
+
+
+def test_saving_a_chain_never_touches_source_rows_or_the_tweet_queue(stored, local):
+    def read():
+        with Database(stored).connect() as db:
+            count = db.execute("SELECT count(*) FROM raw_plays").fetchone()[0]
+            tables = db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+        return count, {table["name"] for table in tables}
+
+    before, _ = read()
+    chain = {"from_play_id": "2895", "steps": [AFTER_KICK]}
+    assert (
+        local.post(
+            "/api/v1/scenarios",
+            json={"game_id": GAME, "edits": [TD_EDIT], "chain": chain, "label": "x"},
+        ).status_code
+        == 201
+    )
+    after, tables = read()
+    assert after == before
     assert not any("outbox" in name or name == "posts" for name in tables)

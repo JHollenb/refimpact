@@ -27,6 +27,14 @@ def test_one_observation_per_game_and_correct_win_direction():
     assert result["bootstrap_95_interval"] is not None
 
 
+def test_coverage_denominator_is_flags_that_took_effect():
+    took_effect = {"penalty_coverage": {"took_effect": 4}}
+    result = relationships([game(1, 1, 7, **took_effect), game(2, 2, 14, **took_effect)])
+    assert result["penalty_rows"] == 20  # Declined flags stay reported ...
+    assert result["flags_took_effect"] == 8  # ... but have no effect to price.
+    assert result["scored_calls"] == 4
+
+
 def test_missing_evidence_never_zero_and_future_scores_not_analyzed():
     result = relationships(
         [

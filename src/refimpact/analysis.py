@@ -43,6 +43,9 @@ def relationships(games: list[dict], metric: str = "penalty_epa") -> dict:
                 "total_points": g["home_score"] + g["away_score"],
                 "scored_calls": g.get("valued_penalties", g["scored_calls"]),
                 "penalty_rows": g["penalty_rows"],
+                "flags_took_effect": g.get("penalty_coverage", {}).get(
+                    "took_effect", g["penalty_rows"]
+                ),
             }
         )
     x = np.array([r["net_home_epa"] for r in rows])
@@ -85,6 +88,8 @@ def relationships(games: list[dict], metric: str = "penalty_epa") -> dict:
         "benefited_team_win_rate": aligned / len(decisive) if decisive else None,
         "scored_calls": sum(row["scored_calls"] for row in rows),
         "penalty_rows": sum(row["penalty_rows"] for row in rows),
+        # Coverage's denominator: a declined flag has no effect to price.
+        "flags_took_effect": sum(row["flags_took_effect"] for row in rows),
         "points": rows,
         "interpretation": (
             "Descriptive association for the selected metric. A positive correlation means "

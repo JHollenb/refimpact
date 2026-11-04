@@ -53,6 +53,25 @@ LATE_SECONDS = 120
 HURRY_DELAY = 10
 RUNOUT_DELAY = 20
 CLOCK_RUNS = {"running", "ready"}
+OUT_OF_BOUNDS = re.compile(r"ball out of bounds at (?:([A-Z]{2,3}) )?(\d{1,2})")
+FUMBLE_SPOT = re.compile(
+    r"(?:\b(?:to|ran ob at|pushed ob at|out of bounds at)\s+|sacked at )"
+    r"(?:([A-Z]{2,3}) )?(\d{1,2})\b"
+)
+# What a description holds when nothing happened: a clock, a formation, a reported eligible.
+NO_ACTION = re.compile(
+    r"\s*(?:\(\d*:\d+\)\s*)?(?:(?:\d+-\S+(?: and \d+-\S+)* reported in as eligible\."
+    r"|\((?:Shotgun|No Huddle|No Huddle, Shotgun|Run formation|Pass formation|Punt formation"
+    r"|Field Goal formation)\))\s*)*"
+)
+# A try that was played and written, then erased.
+TRY_RESULTS = {
+    "extra point is GOOD": 1,
+    "extra point is No Good": 0,
+    "extra point is Blocked": 0,
+    "ATTEMPT SUCCEEDS": 2,
+    "ATTEMPT FAILS": 0,
+}
 
 
 def finite(value) -> bool:
@@ -199,11 +218,57 @@ def touchdown_team(before: State, prefix: str) -> str:
     return before.possession
 
 
+def single_recovery(text: str, default_team: str) -> tuple[str, tuple] | None:
+    """Who ended up with one loose ball, and where, read from the text after a kick.
+
+    None when nothing came loose. Several loose balls or a lateral are not guessed. A return after
+    the recovery ends the play.
+    """
+    if not re.search(r"FUMBLES|MUFFS", text):
+        return None
+    recoveries, own = RECOVERY.findall(text), SELF_RECOVERY.findall(text)
+    if (
+        len(re.findall(r"FUMBLES|MUFFS", text)) != 1
+        or len(recoveries) + len(own) != 1
+        or "Lateral" in text
+    ):
+        raise ValueError("Loose ball is not a single unambiguous recovery; not guessed")
+    team = recoveries[0][0] if recoveries else default_team
+    spot = recoveries[0][1:] if recoveries else own[0]
+    returned = RETURN_END.findall(
+        text[(RECOVERY.search(text) or SELF_RECOVERY.search(text)).end() :]
+    )
+    return team, returned[-1] if returned else spot
+
+
+def blocked_field_goal(before: State, prefix: str) -> State:
+    """The team recovering a block keeps it; a kicking team short of the line turns it over."""
+    other = opponent(before, before.possession)
+    recoveries = RECOVERY.findall(prefix)
+    if len(recoveries) != 1 or "Lateral" in prefix or "FUMBLES" in prefix:
+        raise ValueError("Blocked or unusual field goal result is not guessed")
+    returned = RETURN_END.findall(prefix[RECOVERY.search(prefix).end() :])
+    team, spot = recoveries[0][0], returned[-1] if returned else recoveries[0][1:]
+    yard = yard_from(other, spot[0] or None, spot[1])
+    if team == other:
+        return advance(before, yard, consumed=True, possession=other)
+    return advance(before, yard, consumed=True)
+
+
 def punt_result(before: State, prefix: str) -> State:
-    if re.search(r"MUFFS|BLOCKED|FUMBLES|Lateral", prefix):
-        raise ValueError("Punt with a muff, block, fumble or lateral is ambiguous; not guessed")
+    if re.search(r"BLOCKED|Lateral", prefix):
+        raise ValueError("Punt with a block or lateral is ambiguous; not guessed")
     other = opponent(before, before.possession)
     tail = prefix[re.search(r"\bpunts\b", prefix).start() :]
+    loose = single_recovery(tail, other)
+    if loose:
+        team, spot = loose
+        yard = yard_from(other, spot[0] or None, spot[1])
+        return (
+            advance(before, yard, consumed=True, possession=other)
+            if team == other
+            else advance(before, yard, consumed=True, automatic_first=True)
+        )
     if "Touchback" in tail:
         return advance(before, 20, consumed=True, possession=other)
     returned = RETURN_END.findall(tail)
@@ -222,13 +287,35 @@ def punt_result(before: State, prefix: str) -> State:
 def fumble_result(before: State, prefix: str) -> State:
     recoveries = RECOVERY.findall(prefix)
     own = SELF_RECOVERY.findall(prefix)
+    other = opponent(before, before.possession)
+    out = OUT_OF_BOUNDS.search(prefix)
+    if (
+        out
+        and not recoveries
+        and not own
+        and len(re.findall(r"FUMBLES", prefix)) == 1
+        and not re.search(r"Lateral|INTERCEPT|MUFFS", prefix)
+    ):
+        # Rule 8-7: backward keeps the inbounds spot, forward returns to the spot of the fumble.
+        # Whichever is farther from the goal is the one that applies.
+        carried = FUMBLE_SPOT.findall(prefix[: prefix.index("FUMBLES")])
+        if not carried:
+            raise ValueError("Fumble spot is not written; not guessed")
+        return advance(
+            before,
+            max(
+                yard_from(other, carried[-1][0] or None, carried[-1][1]),
+                yard_from(other, out.group(1), out.group(2)),
+            ),
+            consumed=True,
+        )
     if (
         len(re.findall(r"FUMBLES", prefix)) != 1
         or len(recoveries) + len(own) != 1
-        or re.search(r"Lateral|INTERCEPT|MUFFS", prefix)
+        or len(re.findall(r"INTERCEPTED", prefix)) > 1
+        or re.search(r"Lateral|MUFFS", prefix)
     ):
         raise ValueError("Fumble recovery is not a single unambiguous sequence; not guessed")
-    other = opponent(before, before.possession)
     team = recoveries[0][0] if recoveries else before.possession
     spot = recoveries[0][1:] if recoveries else own[0]
     # A return after the recovery ends the play; a gain before the fumble does not.
@@ -239,11 +326,10 @@ def fumble_result(before: State, prefix: str) -> State:
     if returned:
         spot = returned[0]
     yard = yard_from(other, spot[0] or None, spot[1])
-    return (
-        advance(before, yard, consumed=True)
-        if team == before.possession
-        else advance(before, yard, consumed=True, possession=other)
-    )
+    if team != before.possession:
+        return advance(before, yard, consumed=True, possession=other)
+    # Getting back an interception is a new series; a fumble the offense kept is not.
+    return advance(before, yard, consumed=True, automatic_first="INTERCEPTED" in prefix)
 
 
 def play_result(before: State, row: dict, prefix: str, kick_spot: float | None = None) -> State:
@@ -262,7 +348,7 @@ def play_result(before: State, row: dict, prefix: str, kick_spot: float | None =
                 consumed=True,
                 possession=opponent(before, before.possession),
             )
-        raise ValueError("Blocked or unusual field goal result is not guessed")
+        return blocked_field_goal(before, prefix)
     if re.search(r"\bpunts\b", prefix):
         return punt_result(before, prefix)
     if re.search(r"\bkicks\b", prefix):
@@ -287,10 +373,15 @@ def play_result(before: State, row: dict, prefix: str, kick_spot: float | None =
             original_coordinate = yard_from(other, endpoint[0] or None, endpoint[1])
             return advance(before, original_coordinate, consumed=True, possession=other)
         raise ValueError("Interception return endpoint is not recoverable from the description")
-    if re.search(r"pass incomplete", prefix, re.I):
+    if re.search(r"pass incomplete|spiked the ball", prefix, re.I):
         return advance(before, before.yardline_100, consumed=True)
     prefix = re.sub(r"for a loss of (\d+) yards?", r"for -\1 yards", prefix, flags=re.I)
     gains = re.findall(r"for (-?\d+) yards?\b", prefix, re.I)
+    ended = RETURN_END.findall(prefix)
+    if len(gains) > 1 and "Lateral" in prefix and len(ended) == len(gains):
+        # The last written spot is where the carry ended, however it got there.
+        other = opponent(before, before.possession)
+        return advance(before, yard_from(other, ended[-1][0] or None, ended[-1][1]), consumed=True)
     if len(gains) > 1:
         raise ValueError("Multiple written gains need an unambiguous net result; not guessed")
     if gains:
@@ -414,7 +505,7 @@ def nullified_record(row: dict, prefix: str, disposition: str) -> dict | None:
     written = bool(
         re.search(
             r"\b(?:for (?:-?\d+ yards?|no gain|a loss of \d+)|pass incomplete|"
-            r"sacked|INTERCEPTED|FUMBLES?|TOUCHDOWN|SAFETY|punts|field goal)\b",
+            r"sacked|INTERCEPTED|FUMBLES?|TOUCHDOWN|SAFETY|punts|field goal|spiked)\b",
             prefix,
             re.I,
         )
@@ -498,9 +589,22 @@ def approximation(prefix: str, kick_spot: float | None) -> str | None:
         )
     if re.search(r"field goal is No Good", prefix):
         return "Approximate: missed kick gives the opponent the spot of the kick or its own 20."
-    if re.search(r"FUMBLES", prefix):
+    if "BLOCKED" in prefix:
+        return "Approximate: possession and spot read from the written recovery of the block."
+    if re.search(r"FUMBLES|MUFFS", prefix):
         return "Approximate: possession and spot read from the written recovery and return."
+    if "Lateral" in prefix:
+        return "Approximate: the carry ends at the last written spot."
     return None
+
+
+def no_action_written(row: dict, prefix: str) -> bool:
+    """A no-play row with nothing written before the flag: the foul came with no snap to erase."""
+    return (
+        row.get("play_type") == "no_play"
+        and "No Play" in (row.get("desc") or "")
+        and NO_ACTION.fullmatch(prefix) is not None
+    )
 
 
 def unpriced_reason(row: dict, event: dict, prefix: str) -> str | None:
@@ -510,6 +614,9 @@ def unpriced_reason(row: dict, event: dict, prefix: str) -> str | None:
     text = row.get("desc") or ""
     if not finite(row.get("qtr")) or row["qtr"] > 4:
         return "overtime_not_modeled"
+    # Text that mentions a penalty but names no foul, whatever else the play was.
+    if any(f["team"] is None or f["disposition"] == "unknown" for f in event["fouls"]):
+        return "foul_not_identified"
     if any("measured post-kick" in issue for issue in event["issues"]):
         return "no_measured_kick_spot"
     if re.search(r"TWO-POINT CONVERSION|extra point", text) or (
@@ -528,8 +635,6 @@ def unpriced_reason(row: dict, event: dict, prefix: str) -> str | None:
         return "kick_result_ambiguous"
     if re.search(r"FUMBLES|INTERCEPT|TOUCHDOWN", prefix):
         return "turnover_sequence_ambiguous"
-    if any(f["team"] is None or f["disposition"] == "unknown" for f in event["fouls"]):
-        return "foul_not_identified"
     if not re.search(r"\bfor (?:-?\d|no gain|a loss)|incomplete|sacked|kneel|spike", prefix, re.I):
         return "no_written_action"
     return "other"
@@ -644,15 +749,22 @@ def finish_decision(event: dict, decision: dict, before: State) -> None:
 
 
 def kick_return_state(next_state: State, prefix: str, receiver: str, kick_spot) -> State:
-    """The written kickoff result, as the receiving team's first snap."""
-    if re.search(r"kicks onside|BLOCKED|FUMBLES|Lateral", prefix) or (
-        "MUFFS" in prefix and "and recovers" not in prefix
-    ):
-        raise ValueError("Kickoff with an onside kick, fumble or muff is ambiguous; not guessed")
+    """The written kickoff result, as the first snap of whichever team kept the ball."""
+    if re.search(r"kicks onside|BLOCKED", prefix):
+        raise ValueError("Kickoff with an onside kick or block is ambiguous; not guessed")
     if "TOUCHDOWN" in prefix:
+        if re.search(r"FUMBLES|MUFFS|Lateral", prefix):
+            raise ValueError("Return touchdown after a loose ball is ambiguous; not guessed")
         return after_score(next_state, receiver, 7, kick_spot)
     kicker = opponent(next_state, receiver)
     tail = prefix[re.search(r"\bkicks\b", prefix).start() :]
+    loose = single_recovery(tail, receiver)
+    if loose:
+        team, spot = loose
+        yards = yard_from(opponent(next_state, team), spot[0] or None, spot[1])
+        return changed(
+            next_state, possession=team, yardline_100=yards, down=1, ydstogo=min(10, yards)
+        )
     touchback = re.search(r"Touchback to the ([A-Z]{2,3}) (\d{1,2})", tail)
     returned = RETURN_END.findall(tail)
     if touchback:
@@ -676,7 +788,12 @@ def evaluate_kickoff(
     """
     if not following or following.get("game_id") != row["game_id"]:
         raise ValueError("No following scrimmage state for this kickoff")
-    if any(f["type"] in KICK_PLACEMENT for f in fouls):
+    placement = any(f["type"] in KICK_PLACEMENT for f in fouls)
+    if placement and (
+        len(fouls) > 1
+        or re.search(r"kicks onside|Illegal Touch", row.get("desc") or "")
+        or not re.search(r"placed at", row.get("desc") or "")
+    ):
         raise ValueError("Kick-rule placement has no foul-free result in the feed")
     if score_stands(prefix, row.get("desc") or ""):
         raise ValueError("Return touchdown stands; enforcement falls on the try or next kick")
@@ -687,9 +804,25 @@ def evaluate_kickoff(
         row[key[actual.away_team]],
     ) or (actual.qtr <= 2) != (row["qtr"] <= 2):
         raise ValueError("Score or half changed before the next snap; not compared")
-    noflag = kick_return_state(actual, prefix, row["posteam"], kick_spot)
-    actual_id = "accept" if len(fouls) == 1 else "as_called"
     note = approximation(prefix, kick_spot)
+    if placement:
+        # The kick never stayed in play, so the only foul-free reference is a typical kick.
+        if kick_spot is None:
+            raise ValueError("Kick placement needs a measured post-kick start spot")
+        noflag = changed(
+            actual,
+            possession=row["posteam"],
+            yardline_100=kick_spot,
+            down=1,
+            ydstogo=min(10, kick_spot),
+        )
+        note = (
+            f"Approximate: the placement against a kick kept in play, read as the season mean "
+            f"start, {kick_spot:g} yards from goal. The feed has no foul-free result for this kick."
+        )
+    else:
+        noflag = kick_return_state(actual, prefix, row["posteam"], kick_spot)
+    actual_id = "accept" if len(fouls) == 1 else "as_called"
     assumptions = [
         "Compares the next recorded snap with the written kick result, both at that snap's clock "
         "and timeouts. Rows without a scrimmage state have no earlier value to subtract.",
@@ -724,7 +857,7 @@ def evaluate_kickoff(
     )
     event.update(
         before=noflag.model_dump(),
-        enforcement_baseline="written_kick_result",
+        enforcement_baseline="season_mean_kick" if placement else "written_kick_result",
         approximate=note,
         valuation_status="valued",
     )
@@ -741,9 +874,10 @@ def evaluate_row(
     scorer: Scorer,
     clock_context: list[dict] | None = None,
     kick_spot: float | None = None,
+    try_rate: dict[str, float] | None = None,
 ) -> dict:
     _, prefix, _ = parse_fouls(row)
-    event = value_row(row, following, receiver, scorer, clock_context, kick_spot)
+    event = value_row(row, following, receiver, scorer, clock_context, kick_spot, try_rate)
     event["unpriced_reason"] = unpriced_reason(row, event, prefix)
     return event
 
@@ -755,6 +889,7 @@ def value_row(
     scorer: Scorer,
     clock_context: list[dict] | None,
     kick_spot: float | None,
+    try_rate: dict[str, float] | None = None,
 ) -> dict:
     fouls, prefix, revised = parse_fouls(row)
     disposition = (
@@ -829,6 +964,12 @@ def value_row(
         except (ValueError, TypeError, KeyError) as exc:
             event["issues"].append(str(exc))
         return event
+    if written_try(prefix) is not None and disposition == "accepted":
+        try:
+            evaluate_try(row, event, prefix, clock_context, receiver, scorer, kick_spot, try_rate)
+        except (ValueError, TypeError, KeyError) as exc:
+            event["issues"].append(str(exc))
+        return event
     try:
         before = state_from_row(row, receiver)
     except (ValueError, TypeError, KeyError):
@@ -872,17 +1013,32 @@ def value_row(
                     }
                 )
                 break
-    dead = len(fouls) == 1 and fouls[0]["type"] in DEAD and "No Play" in (row.get("desc") or "")
+    dead_ball_foul = (
+        len(fouls) == 1 and fouls[0]["type"] in DEAD and "No Play" in (row.get("desc") or "")
+    )
+    no_action = not dead_ball_foul and no_action_written(row, prefix)
+    dead = dead_ball_foul or no_action
     event["enforcement_baseline"] = "fresh_down" if dead else "described_play_result"
     observed = None
     if following and following.get("game_id") == game_id:
         try:
             next_state = state_from_row(following, receiver)
+            # A safety enforced on the offense is on the next snap's board: two for the defense.
+            enforced_safety = (
+                2 * (before.possession == before.away_team),
+                2 * (before.possession == before.home_team),
+            )
+            added = (
+                next_state.home_score - before.home_score,
+                next_state.away_score - before.away_score,
+            )
             if (
-                next_state.home_score == before.home_score
-                and next_state.away_score == before.away_score
-                and (next_state.qtr <= 2) == (before.qtr <= 2)
-            ):
+                added == (0, 0)
+                or (
+                    added == enforced_safety
+                    and "enforced in End Zone, SAFETY" in (row.get("desc") or "")
+                )
+            ) and (next_state.qtr <= 2) == (before.qtr <= 2):
                 observed = changed(
                     next_state,
                     home_timeouts=before.home_timeouts,
@@ -1141,6 +1297,15 @@ def value_row(
         return event
     finish_decision(event, decision, before)
     event["approximate"] = None if dead else approximation(prefix, kick_spot)
+    if no_action:
+        event["approximate"] = (
+            "Approximate: nothing is written before the flag on this no-play row, so the "
+            "foul-free state is the same down, not yet played."
+        )
+    elif "enforced in End Zone, SAFETY" in (row.get("desc") or ""):
+        event["approximate"] = (
+            "Approximate: the ruling is the next recorded snap, after the safety and its free kick."
+        )
     if event["approximate"]:
         for branch in decision["branches"]:
             if branch["id"] in {"no_flag", "decline", "erased_result"}:
@@ -1198,6 +1363,124 @@ def value_row(
     return event
 
 
+def written_try(prefix: str) -> int | None:
+    """Points a written try would have scored, or None if this is no written try."""
+    return next((points for text, points in TRY_RESULTS.items() if text in prefix), None)
+
+
+def try_rates(rows: list[dict]) -> dict[int, dict[str, float]]:
+    """Measured per season: how often a played try converts, by kind. Distance is not separated."""
+    counts = defaultdict(lambda: {"xp": [0, 0], "two": [0, 0]})
+    for row in rows:
+        for kind, column, made in (
+            ("xp", "extra_point_result", "good"),
+            ("two", "two_point_conv_result", "success"),
+        ):
+            if row.get(column):
+                counts[row["season"]][kind][0] += row[column] == made
+                counts[row["season"]][kind][1] += 1
+    return {
+        season: {kind: made / tried for kind, (made, tried) in kinds.items() if tried}
+        for season, kinds in counts.items()
+    }
+
+
+def evaluate_try(
+    row: dict,
+    event: dict,
+    prefix: str,
+    later: list[dict] | None,
+    receiver: str | None,
+    scorer: Scorer,
+    kick_spot: float | None,
+    try_rate: dict[str, float] | None,
+) -> None:
+    """A written try erased for a re-try: its points against the re-try at the season's rate.
+
+    A try has no scrimmage state, so both sides are read after the next kick: the opponent's ball
+    at the season's mean spot, with the points on the board, at the row's clock.
+    """
+    if not finite(row.get("qtr")) or row["qtr"] > 4 or "No Play" not in (row.get("desc") or ""):
+        raise ValueError("Only a written try erased for a re-try in regulation is valued")
+    if kick_spot is None:
+        raise ValueError("A try's value needs a measured post-kick start spot")
+    again = next(
+        (
+            r
+            for r in later or []
+            if re.search(r"TWO-POINT|extra point|Kick formation", r.get("desc") or "")
+        ),
+        None,
+    )
+    if again is None:
+        raise ValueError("No re-try is recorded after this try")
+    kind = "two" if "TWO-POINT" in again["desc"] else "xp"
+    rate = (try_rate or {}).get(kind)
+    if rate is None:
+        raise ValueError("No measured conversion rate for this try")
+    team = row["posteam"]
+    scored = written_try(prefix)
+    after = state_from_row(
+        row
+        | {
+            "posteam": row["defteam"],
+            "defteam": team,
+            "posteam_score": row["defteam_score"],
+            "defteam_score": row["posteam_score"],
+            "down": 1,
+            "ydstogo": min(10, kick_spot),
+            "yardline_100": kick_spot,
+        },
+        receiver,
+    )
+    key = "home_score" if team == after.home_team else "away_score"
+    worth = {"xp": 1, "two": 2}[kind]
+
+    def board(points: int) -> State:
+        return changed(after, **{key: getattr(after, key) + points})
+
+    written, made, missed = board(scored), board(worth), board(0)
+    values = scorer.predict([written, made, missed], team)
+    vegas = scorer.vegas_wp([written, made, missed], team)
+    margin = [
+        s.score_diff(team) + v.ep for s, v in zip((written, made, missed), values, strict=True)
+    ]
+    event["enforcement_epa"] = rate * margin[1] + (1 - rate) * margin[2] - margin[0]
+    event["enforcement_wp_swing_pp"] = 100 * (
+        rate * values[1].wp + (1 - rate) * values[2].wp - values[0].wp
+    )
+    event["enforcement_wp_vegas_pp"] = (
+        100 * (rate * vegas[1] + (1 - rate) * vegas[2] - vegas[0]) if None not in vegas else None
+    )
+    sign = 1 if team == after.home_team else -1
+    event.update(
+        before=written.model_dump(),
+        enforcement_baseline="written_try_result",
+        enforcement_wp_common_clock_pp=event["enforcement_wp_swing_pp"],
+        enforcement_wp_vegas_common_clock_pp=event["enforcement_wp_vegas_pp"],
+        enforcement_wp_basis="common_clock",
+        home_epa_impact=event["enforcement_epa"] * sign,
+        home_wp_swing_pp=event["enforcement_wp_swing_pp"] * sign,
+        home_wp_vegas_swing_pp=event["enforcement_wp_vegas_pp"] * sign
+        if event["enforcement_wp_vegas_pp"] is not None
+        else None,
+        valuation_status="valued",
+        approximate=f"Approximate: the written try counted as {scored} against the re-try at the "
+        f"season's {'two-point' if kind == 'two' else 'extra-point'} rate ({rate:.0%}), with no "
+        f"adjustment for distance, each read after the next kick {kick_spot:g} yards from goal "
+        "at the same clock.",
+    )
+    if event.get("nullified_play"):
+        event["nullified_play"].update(
+            status="valued",
+            recorded=True,
+            reason="The written try is compared with the re-try that followed it.",
+            impact_epa=event["enforcement_epa"],
+            wp_swing_pp=event["enforcement_wp_swing_pp"],
+            reference_team=team,
+        )
+
+
 def kickoff_start_spots(rows: list[dict]) -> dict[int, float]:
     """Measured: whole-yard mean distance to goal on the receiver's first snap after a kickoff.
 
@@ -1223,13 +1506,18 @@ def kickoff_start_spots(rows: list[dict]) -> dict[int, float]:
 
 
 def build_penalties(
-    frame: pl.DataFrame, scorer: Scorer, kick_spots: dict[int, float] | None = None
+    frame: pl.DataFrame,
+    scorer: Scorer,
+    kick_spots: dict[int, float] | None = None,
+    rates: dict[int, dict[str, float]] | None = None,
 ) -> list[dict]:
     ordering = ["game_id", "order_sequence" if "order_sequence" in frame.columns else "play_id"]
     rows = frame.sort(ordering).to_dicts()
     receivers = second_half_receivers(rows)
     if kick_spots is None:
         kick_spots = kickoff_start_spots(rows)
+    if rates is None:
+        rates = try_rates(rows)
     following = {}
     next_index = None
     for i in range(len(rows) - 1, -1, -1):
@@ -1244,6 +1532,7 @@ def build_penalties(
             scorer,
             clock_context=rows[i + 1 : following[i]] if following[i] is not None else [],
             kick_spot=kick_spots.get(r["season"]),
+            try_rate=rates.get(r["season"]),
         )
         for i, r in enumerate(rows)
         if is_flagged(r)

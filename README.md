@@ -151,6 +151,36 @@ them. A blank state gets a win chance with no timeline. `drive_team` names who a
 belongs to; the dashboard defaults to the team that ran the play, and the API warns when its
 default gives the result to the next team.
 
+**Stacking: a prediction timeline.** Each alternate point has a **What if from here?** button. It
+opens a step prefilled from the alternate state: after a score, the other team's ball at the
+season's measured post-kick spot, with the score updated; after no score, the other team's ball.
+You set the state and how that drive ended, and add more. Each node shows win chance, Vegas win
+chance, EP, the swing from the node before, downs and next-score TD and FG chances. You can remove
+the last step, or go back to an earlier node and continue, which replaces what came after. There is
+one active path.
+
+A chain ends one of two ways, and they are not mixed. **Prediction**, the default, stops at the last
+node: no recorded plays follow, no final score is given, and the win chance is conditional on your
+steps. **Rejoin** holds recorded plays from a later play you pick, with scores shifted, and is
+labeled hindsight. No chance of reaching a path is computed: the steps are your choices, not a
+forecast. The clock cannot run backward, scores cannot fall, and overtime is refused, each with an
+error on the field. Chains save with a scenario but are left out of the disputed-calls report and
+are never posted. A zero-change branch reproduces its source state exactly.
+
+```sh
+curl -X POST http://127.0.0.1:8787/api/v1/scenarios/evaluate \
+  -H 'Content-Type: application/json' --data '{"game_id":"2026_08_CHI_SEA","edits":[
+    {"play_id":"2895","changes":{"down":1,"ydstogo":1,"yardline_100":1},"drive_result":"td_xp"}],
+    "chain":{"from_play_id":"2895","steps":[
+      {"possession":"CHI","down":1,"ydstogo":10,"yardline_100":69,"qtr":4,"quarter_seconds":900,
+       "home_score":16,"away_score":20,"home_timeouts":3,"away_timeouts":3,"drive_result":"none"},
+      {"possession":"SEA","down":1,"ydstogo":10,"yardline_100":65,"qtr":4,"quarter_seconds":750,
+       "home_score":16,"away_score":20,"home_timeouts":3,"away_timeouts":3}]}}'
+```
+
+SEA's win chance reads 30% at the changed call, 31% with CHI's ball after the extra point and 39%
+with a stop and SEA's ball at Q4 12:30. Vegas reads 38%, 33% and 41%.
+
 Each edit also shows the **opportunity** view: downs in hand and the next-score TD, FG and no-score
 chances, for the recorded state and yours. Extra downs flip field goals into touchdowns; see
 sections 10 and 11 of `/api/v1/math` for the measured goal-line results and the heat panel.
@@ -316,15 +346,20 @@ state if that action counted, and compares it with actual enforcement in EPA and
 percentage points. A failed third down becomes fourth down, not an assumed punt. A
 failed fourth down changes possession. Erased touchdowns and field goals are points on the board
 plus the opponent after the kick, at a measured season-mean start spot, with the extra point assumed
-good; these values are approximate and labeled. Muffs, blocks, laterals, several turnovers, safeties,
+good; these values are approximate and labeled. So are kick placements (against the season-mean
+kick), erased tries (the written points against the re-try at the season's rate), single muffs and
+blocked-kick recoveries, and safeties enforced on the offense. Several loose balls, onside kicks,
 scores that stood and non-applicable states retain their written text without an invented numerical
-value, with an `unpriced_reason`. Revised play descriptions use the final written version.
+value, with an `unpriced_reason`. A declined flag has no effect to price, so coverage is priced
+flags over flags that took effect: 97% across 2024 and 2026. Revised play descriptions use the final
+written version.
 The action is conditional evidence: it does not establish when a whistle sounded or
 whether players reacted to it.
 
 Interception touchbacks and explicit, unambiguous interception return endpoints are
 recoverable automatically, including on no-play rows, as are written punt and kickoff results and
-a single written fumble recovery. A kickoff row has no scrimmage pre-state, so it compares the next
+a single written fumble recovery, a fumble out of bounds, and a flag with nothing written before
+it. A kickoff row has no scrimmage pre-state, so it compares the next
 recorded snap with the written return. Anything else stays unpriced; it is not assigned zero.
 
 Clock comparisons apply a reported runoff once. Adjacent administrative rows explicitly

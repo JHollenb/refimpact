@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from refimpact.models import spread_features
-from refimpact.penalties import coverage, evaluate_row, kickoff_start_spots
+from refimpact.penalties import coverage, evaluate_row, kickoff_start_spots, try_rates
 from refimpact.replay import second_half_receivers, state_from_row
 from refimpact.schema import State
 
@@ -158,12 +158,28 @@ def test_written_punt_results(comparison, scorer, text, possession, yardline):
     assert event["enforcement_epa"] is not None
 
 
-def test_muffed_punt_stays_unpriced(comparison, scorer):
+def test_muffed_punt_goes_to_the_team_that_recovered(comparison, scorer):
     source = row(
         comparison,
         down=4,
         play_type="punt",
         desc="9-P punts 40 yards to ARI 30. 2-R MUFFS catch, recovered by BUF-3-T at ARI 30. "
+        "PENALTY on ARI-5-D, Offensive Holding, 10 yards, enforced at ARI 20.",
+    )
+    event = evaluated(comparison, scorer, source)
+    alt = branch(event, "no_flag")["base_state"]
+    # BUF punted and got it back: its own first down at the recovery spot.
+    assert (alt["possession"], alt["down"], alt["yardline_100"]) == ("BUF", 1, 30)
+    assert "written recovery" in event["approximate"]
+
+
+def test_two_loose_balls_on_a_punt_stay_unpriced(comparison, scorer):
+    source = row(
+        comparison,
+        down=4,
+        play_type="punt",
+        desc="9-P punts 40 yards to ARI 30. 2-R MUFFS catch, recovered by BUF-3-T at ARI 30. "
+        "3-T FUMBLES, recovered by ARI-4-U at ARI 28. "
         "PENALTY on ARI-5-D, Offensive Holding, 10 yards, enforced at ARI 20.",
     )
     event = evaluated(comparison, scorer, source)
@@ -241,11 +257,30 @@ def test_erased_return_touchdown_is_oriented_to_the_receiving_team(comparison, s
     assert event["opportunity"]["downs_gained"] is None
 
 
-def test_kick_rule_placement_has_no_foul_free_result(comparison, scorer):
+def test_kick_placement_is_read_against_the_season_mean_kick(comparison, scorer):
     source = kick(
         comparison,
         "9-K kicks 36 yards from BUF 35 to ARI 29, short of landing zone. PENALTY on BUF-9-K, "
         "Kickoff Short of Landing Zone, placed at ARI 40.",
+    )
+    placed = next_snap(source, yardline_100=60)
+    event = evaluate_row(
+        source, placed, comparison.before.second_half_receiver, scorer, kick_spot=SPOT
+    )
+    alt = branch(event, "no_flag")["base_state"]
+    assert (alt["possession"], alt["yardline_100"]) == ("ARI", SPOT)
+    assert event["enforcement_baseline"] == "season_mean_kick"
+    assert "season mean" in event["approximate"]
+    # The kicker's foul gives the receiver the better spot.
+    assert event["reference_team"] == "ARI" and event["enforcement_epa"] > 0
+    assert event["unpriced_reason"] is None
+
+
+def test_onside_kick_placement_has_no_foul_free_result(comparison, scorer):
+    source = kick(
+        comparison,
+        "9-K kicks onside 12 yards from BUF 35 to BUF 47, out of bounds. PENALTY on BUF-9-K, "
+        "Kickoff Out of Bounds, placed at BUF 47.",
     )
     event = evaluate_row(
         source, next_snap(source), comparison.before.second_half_receiver, scorer, kick_spot=SPOT
@@ -315,6 +350,149 @@ def test_two_fumbles_stay_unpriced(comparison, scorer):
     assert event["unpriced_reason"] == "turnover_sequence_ambiguous"
 
 
+def test_blocked_field_goal_goes_to_the_team_that_recovered(comparison, scorer):
+    source = row(
+        comparison,
+        down=4,
+        play_type="field_goal",
+        desc="4-K 48 yard field goal is BLOCKED (9-X), recovered by ARI-5-Y at ARI 40. "
+        "PENALTY on ARI-5-D, Unnecessary Roughness, 15 yards, enforced at ARI 40.",
+    )
+    alt = branch(evaluated(comparison, scorer, source), "no_flag")["base_state"]
+    assert (alt["possession"], alt["down"], alt["yardline_100"]) == ("ARI", 1, 60)
+
+
+def test_fumble_out_of_bounds_keeps_the_farther_spot(comparison, scorer):
+    # Rule 8-7: forward returns to the fumble, backward stays at the inbounds spot.
+    desc = "(:37) 10-Q sacked at ARI 28 for -9 yards (91-T). FUMBLES (91-T), ball out of bounds at "
+    flag = "PENALTY on BUF-10-Q, Illegal Forward Pass, 5 yards, enforced at ARI 33."
+    for out, yard in (("ARI 33", 33), ("ARI 20", 28)):
+        source = row(comparison, desc=f"{desc}{out}. {flag}")
+        alt = branch(evaluated(comparison, scorer, source), "no_flag")["base_state"]
+        assert (alt["possession"], alt["down"], alt["yardline_100"]) == ("BUF", 3, yard)
+
+
+def test_interception_fumbled_back_is_a_new_series(comparison, scorer):
+    source = row(
+        comparison,
+        desc="1-Q pass INTERCEPTED by 2-T at ARI 25. 2-T to ARI 40 for 15 yards. FUMBLES, "
+        "RECOVERED by BUF-3-B at ARI 40. PENALTY on ARI-5-D, Face Mask, 15 yards, "
+        "enforced at ARI 40 - No Play.",
+    )
+    alt = branch(evaluated(comparison, scorer, source), "no_flag")["base_state"]
+    assert (alt["possession"], alt["down"], alt["yardline_100"]) == ("BUF", 1, 40)
+
+
+def test_spike_consumes_the_down(comparison, scorer):
+    source = row(
+        comparison,
+        desc="(:02) 14-Q spiked the ball to stop the clock. PENALTY on BUF-7-O, Illegal Formation, "
+        "5 yards, enforced at ARI 30 - No Play.",
+    )
+    event = evaluated(comparison, scorer, source)
+    alt = branch(event, "no_flag")["base_state"]
+    assert (alt["down"], alt["yardline_100"]) == (3, 30)
+    assert event["nullified_play"]["status"] != "unpriced"
+
+
+def test_lateral_carry_ends_at_the_last_written_spot(comparison, scorer):
+    source = row(
+        comparison,
+        desc="7-Q pass to 3-R to ARI 25 for 5 yards. Lateral to 8-S pushed ob at ARI 16 for 9 "
+        "yards. PENALTY on BUF-1-O, Illegal Block Above the Waist, 10 yards, enforced at ARI 20.",
+    )
+    event = evaluated(comparison, scorer, source)
+    alt = branch(event, "no_flag")["base_state"]
+    assert alt["yardline_100"] == 16
+    assert "last written spot" in event["approximate"]
+
+
+def test_flag_with_nothing_written_before_it_is_the_same_down_unplayed(comparison, scorer):
+    source = row(
+        comparison,
+        desc="(9:00) (Run formation) 74-L reported in as eligible. PENALTY on BUF, Offensive Too "
+        "Many Men on Field, 5 yards, enforced at ARI 30 - No Play.",
+    )
+    event = evaluated(comparison, scorer, source, yardline_100=35, ydstogo=10, down=2)
+    assert event["enforcement_epa"] < 0 and event["unpriced_reason"] is None
+    assert "not yet played" in event["approximate"]
+
+
+def test_safety_enforced_on_the_offense_is_the_next_snap(comparison, scorer):
+    b = comparison.before
+    source = row(
+        comparison,
+        yardline_100=95,
+        desc="(9:00) 7-Q pass incomplete short left. PENALTY on BUF-7-O, Offensive Holding, 5 "
+        "yards, enforced in End Zone, SAFETY - No Play.",
+    )
+    other_scores = {
+        "posteam": b.away_team if b.possession == b.home_team else b.home_team,
+        "defteam": b.possession,
+        "posteam_score": 19,
+        "defteam_score": 3,
+        "yardline_100": 75,
+        "down": 1,
+        "ydstogo": 10,
+    }
+    event = evaluated(comparison, scorer, source, **other_scores)
+    assert event["unpriced_reason"] is None and event["enforcement_epa"] < -1
+    assert "safety" in event["approximate"]
+
+
+def try_row(comparison, text, **changes):
+    return (
+        row(comparison, down=None, ydstogo=None, yardline_100=15, play_type="no_play", desc=text)
+        | changes
+    )
+
+
+def test_erased_try_is_its_points_against_the_retry_at_the_season_rate(comparison, scorer):
+    b = comparison.before
+    source = try_row(
+        comparison,
+        "TWO-POINT CONVERSION ATTEMPT. 7-Q pass to 1-R is incomplete. ATTEMPT FAILS. PENALTY on "
+        "ARI-5-D, Defensive Pass Interference, 1 yard, enforced at ARI 2 - No Play.",
+    )
+    again = source | {"desc": "TWO-POINT CONVERSION ATTEMPT. 7-Q rushes. ATTEMPT SUCCEEDS."}
+    after = again | {
+        "play_type": "kickoff",
+        "desc": "9-K kicks 65 yards to end zone, Touchback.",
+    }
+    rate = {"xp": 0.9, "two": 0.5}
+    event = evaluate_row(
+        source, after, b.second_half_receiver, scorer, [again], SPOT, try_rate=rate
+    )
+    assert event["enforcement_baseline"] == "written_try_result"
+    assert "two-point rate (50%)" in event["approximate"]
+    # Half of two points is about one point of margin, against the opponent's same kickoff.
+    assert 0.8 < event["enforcement_epa"] < 1.2
+    assert event["reference_team"] == b.possession
+    assert event["nullified_play"]["status"] == "valued"
+    assert event["nullified_play"]["impact_epa"] == event["enforcement_epa"]
+
+
+def test_try_rate_is_measured_from_the_feeds_result_columns():
+    rows = [
+        {"season": 2026, "extra_point_result": "good"},
+        {"season": 2026, "extra_point_result": "blocked"},
+        {"season": 2026, "two_point_conv_result": "success"},
+        {"season": 2026, "desc": "9-K extra point is GOOD. PENALTY on A-1-B, Holding - No Play."},
+    ]
+    assert try_rates(rows) == {2026: {"xp": 0.5, "two": 1.0}}
+
+
+def test_try_kept_with_enforcement_between_downs_stays_unpriced(comparison, scorer):
+    source = try_row(
+        comparison,
+        "7-K extra point is GOOD, Center-4, Holder-1. PENALTY on ARI-1-C, Unnecessary Roughness, "
+        "15 yards, enforced between downs.",
+    )
+    event = evaluated(comparison, scorer, source)
+    assert event["enforcement_epa"] is None
+    assert event["unpriced_reason"] == "try_not_modeled"
+
+
 def test_erased_and_missed_field_goals(comparison, scorer):
     good = row(
         comparison,
@@ -379,6 +557,21 @@ def test_first_down_reset_gains_one_two_three_downs_by_the_down_it_came_from(com
         )
         event = evaluated(comparison, scorer, source, down=1, ydstogo=1, yardline_100=1)
         assert event["opportunity"]["downs_gained"] == gained
+
+
+def test_kickoff_muff_recovered_by_the_kicker_is_the_kickers_ball(comparison, scorer):
+    source = kick(
+        comparison,
+        "9-K kicks 60 yards from BUF 35 to ARI 5. 2-R to ARI 28 for 23 yards (3-T). FUMBLES (3-T), "
+        "RECOVERED by BUF-4-U at ARI 24. PENALTY on BUF-9-K, Illegal Formation, 5 yards, "
+        "enforced at BUF 35 - No Play.",
+    )
+    event = evaluate_row(
+        source, next_snap(source), comparison.before.second_half_receiver, scorer, kick_spot=SPOT
+    )
+    alt = branch(event, "no_flag")["base_state"]
+    assert (alt["possession"], alt["down"], alt["yardline_100"]) == ("BUF", 1, 24)
+    assert event["reference_team"] == "ARI" and event["enforcement_epa"] > 0
 
 
 def test_kick_spot_is_measured_per_season_and_ignores_kicker_recoveries():

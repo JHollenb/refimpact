@@ -166,12 +166,13 @@ def derive_week(
     season: int,
     week: int,
 ) -> dict:
-    from refimpact.penalties import kickoff_start_spots
+    from refimpact.penalties import kickoff_start_spots, try_rates
     from refimpact.tweets import render_tweet
 
     ordering = ["game_id", "order_sequence" if "order_sequence" in frame.columns else "play_id"]
     # Measured over all the season's rows supplied, not one week's few kickoffs.
-    kick_spots = kickoff_start_spots(frame.sort(ordering).to_dicts())
+    season_rows = frame.sort(ordering).to_dicts()
+    kick_spots, rates = kickoff_start_spots(season_rows), try_rates(season_rows)
     frame = frame.filter((pl.col("season") == season) & (pl.col("week") == week))
     if frame.is_empty():
         raise ValueError(f"No plays for {season} week {week}")
@@ -244,7 +245,7 @@ def derive_week(
     from refimpact.production import build_production
     from refimpact.progression import build_progression
 
-    penalties = build_penalties(frame, scorer, kick_spots)
+    penalties = build_penalties(frame, scorer, kick_spots, rates)
     production, drives = build_production(frame, penalties)
     progression = build_progression(frame, penalties, drives)
     summary = {
