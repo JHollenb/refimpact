@@ -338,3 +338,12 @@ The original bot's optional queue filter keeps eligible legacy comparisons when
 and timing coverage than the expanded dashboard ledger. Queue selection is not a
 scientific significance threshold or a call-correctness decision. A transform never
 queues or publishes tweets.
+
+## What if? timelines
+
+An edit replaces the state recorded after a play. At the moment, `win-chance swing = 100 * (WP(entered) - WP(recorded next))` and `points swing = (margin + EP)(entered) - (margin + EP)(recorded next)`, both on the same fixed-team model.
+
+A drive result then ends the edited drive with `home score at rejoin = entered home score + points if home has the ball`, and likewise for away. Every later row uses its recorded pre-snap state with `score shift = alternate score at rejoin - recorded score at the end of that drive`. Nothing else about later rows changes, so the alternate line is hindsight accounting and not a forecast. Rows without a scrimmage state carry the last alternate value. The final row is 100% or 0% for a decided margin and unknown for a tie, because overtime is not modeled.
+
+The disputed-calls range adds points swings as an approximation, from zero (none wrong) to all of them (all wrong). Win-chance swings are never added.
+

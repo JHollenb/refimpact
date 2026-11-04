@@ -115,10 +115,63 @@ The API is local and unauthenticated. It exposes no tweet-publishing, credential
 arbitrary-file or arbitrary-URL endpoints. If you later expose it beyond loopback,
 add the access controls appropriate for that deployment.
 
+## What if? Enter a play yourself
+
+The penalty ledger below values flags that were thrown; it does not say whether a call was
+right, and a no-call never appears in play-by-play. To test a disputed moment, open a game and
+use **What if?** Pick any play, including one with no flag. Its fields start at what was
+recorded next (possession, down, distance, yard line, quarter, clock, scores and timeouts).
+Change them to what you think should have happened and the card compares win chance and points
+against the recorded state at that moment.
+
+Then choose how that drive ends (TD + XP, TD + 2-pt, field goal or no score) to draw an
+alternate timeline. The rest of that drive is replaced. Later drives keep their recorded states
+on a shifted scoreboard, and each later snap is re-scored by the same published WP model. Add
+more plays to stack edits; each is valued on the scoreboard the earlier ones produced.
+
+```sh
+curl -X POST http://127.0.0.1:8787/api/v1/scenarios/evaluate \
+  -H 'Content-Type: application/json' --data '{"game_id":"2026_08_CHI_SEA","edits":[
+    {"play_id":"2895","changes":{"down":1,"ydstogo":1,"yardline_100":1},"drive_result":"td_xp"}]}'
+```
+
+For that edit SEA's win chance at the moment is 29.6% rather than the recorded 21.1%. Holding
+later plays, SEA leads 24-20 at the Q4 9:01 delay of game (68.0% rather than 26.9%) and the
+final is CHI 34-24. The two numbers answer different questions. The first is what the call was
+worth when it happened. The second is **hindsight**: a touchdown would have changed everything
+after it, including field position, play-calling and the turnover that set up SEA's later score.
+The result also reports the real game's next win-chance move separately from the call, because
+a blocked kick is not the officials' doing.
+
+Without edits the same code reproduces the published `home_wp` line, and every response reports
+that check. Overtime is not modeled: a tied alternate final says so rather than giving a win
+chance, and overtime rows are not re-scored. Kickoffs and tries have no scrimmage state, so the
+alternate line carries its last value across them. A blank state gets a win chance with no
+timeline.
+
+Save a scenario with a label, type, assumptions and source link. Marking it disputed requires a
+source and adds it to the game's **Disputed calls** report, which shows the range from none of
+those calls being wrong (the actual margin) to all of them being wrong. Win-chance swings are not
+added; points are added as an approximation. A source shows who disputes a call, not that the call
+was wrong, and this tool never decides that. Report only what you have looked for: disputes
+collected for one team alone will lean toward that team.
+
+Scenarios never change source rows and never reach the tweet queue. Anyone on your network can
+compute one, but only this computer can save or delete, because the LAN server has no login.
+
+| Endpoint | Result |
+| --- | --- |
+| `GET /api/v1/scenarios/plays?game_id=...` | Editable plays with prefilled states |
+| `POST /api/v1/scenarios/evaluate` | Moment comparison and timeline; saves nothing |
+| `POST /api/v1/scenarios/state` | Win chance for one blank state |
+| `GET` / `POST /api/v1/scenarios`, `GET` / `DELETE /api/v1/scenarios/{id}` | Saved scenarios |
+| `GET /api/v1/scenarios/disputes?game_id=...` | Disputed calls and the margin range |
+
 ## Reading the scoreboard and game history
 
 The scoreboard's **Estimated penalty benefit** is a known-effects comparison ledger
-across both possessions. **Observed offense EPA · includes penalties** is actual
+across both possessions. It measures what penalties were worth, not what officials did: a
+correct flag on a real foul counts as a benefit to the other team. **Observed offense EPA · includes penalties** is actual
 scrimmage production. These are separate measurements, not components to add together.
 For CHI at SEA in Week 8, SEA's +14.16 estimated benefit consists of +13.97 while SEA had
 the ball and +0.19 while CHI had it. SEA's observed offensive EPA is -7.75, already
@@ -236,7 +289,8 @@ restart timing. Do not equate those quantities.
 
 Nullified actions are processed automatically from the written description preceding
 the flag. The API's `nullified_play` record retains the exact text and source row, and
-reports `valued`, `not_recorded`, or `unpriced`. There is no manual-review or video step.
+reports `valued`, `not_recorded`, or `unpriced`. This ledger has no manual-review or video
+step; use **What if?** to enter an action the source does not record.
 Use `/api/v1/penalties?season=2026&week=8&nullified_status=valued` to find calculated
 comparisons; `nullified_coverage` discloses the available and missing result counts.
 

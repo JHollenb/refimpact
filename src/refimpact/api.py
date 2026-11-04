@@ -3,13 +3,14 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import re
 import threading
 from collections import Counter
 from datetime import date
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import Field
@@ -18,13 +19,25 @@ from starlette.middleware.gzip import GZipMiddleware
 from refimpact.decisions import DecisionRequest, evaluate_decision
 from refimpact.models import MODEL_ID, Scorer
 from refimpact.pipeline import code_digest, execute_transform, request_transform
-from refimpact.schema import Comparison, Record
+from refimpact.scenarios import (
+    ScenarioRequest,
+    ScenarioSave,
+    ScenarioStore,
+    disputed_report,
+    evaluate_scenario,
+    game_rows,
+    read_state,
+    scenario_plays,
+)
+from refimpact.schema import Comparison, Record, State
 from refimpact.storage import DATA_TABLES, DEFAULT_DATABASE, Database
 from refimpact.tweets import render_tweet
 
 Year = Annotated[int, Query(ge=2000, le=2100)]
 Week = Annotated[int, Query(ge=1, le=22)]
 WEB = Path(__file__).parent / "web"
+GAME_ID = re.compile(r"\d{4}_\d{2}_[A-Z]{2,3}_[A-Z]{2,3}")
+LOOPBACK = {"127.0.0.1", "::1"}
 
 
 class StoredResults:
@@ -69,6 +82,7 @@ def create_app(
     database = Database(database_path)
     database.recover_abandoned()
     results = StoredResults(database)
+    scenarios = ScenarioStore(database)
     app.add_middleware(GZipMiddleware, minimum_size=1000)
     numerical_code = code_digest()
     scorer = None
@@ -80,6 +94,7 @@ def create_app(
             request.method == "GET"
             and request.url.path.startswith("/api/v1/")
             and not request.url.path.startswith("/api/v1/transforms")
+            and not request.url.path.startswith("/api/v1/scenarios")
             and request.url.path not in {"/api/v1/data/schema", "/api/v1/data/calculations"}
         )
         etag = None
@@ -503,6 +518,73 @@ def create_app(
             "decision", body.model_dump(mode="json"), result, MODEL_ID, numerical_code
         )
         return result | {"calculation_id": cid}
+
+    def stored_game(game_id: str):
+        if not GAME_ID.fullmatch(game_id):
+            raise HTTPException(422, "Invalid game ID")
+        try:
+            return game_rows(database, game_id)
+        except LookupError as exc:
+            raise HTTPException(404, str(exc)) from None
+
+    def score_scenario(body: ScenarioRequest, rows: list[dict]) -> dict:
+        nonlocal scorer
+        with score_lock:
+            try:
+                scorer = scorer or Scorer(models_path)
+                return evaluate_scenario(rows, body, scorer)
+            except (ValueError, OSError) as exc:
+                raise HTTPException(422, str(exc)) from None
+
+    def local_only(request: Request):
+        # The dashboard is open to the LAN without a login; only this computer may write.
+        if not request.client or request.client.host not in LOOPBACK:
+            raise HTTPException(403, "Scenarios can only be changed from this computer")
+
+    @app.get("/api/v1/scenarios/plays")
+    def editable_plays(game_id: str):
+        return scenario_plays(stored_game(game_id)[0])
+
+    @app.post("/api/v1/scenarios/evaluate")
+    def evaluate(body: ScenarioRequest):
+        return score_scenario(body, stored_game(body.game_id)[0])
+
+    @app.post("/api/v1/scenarios/state")
+    def blank_state(body: State):
+        nonlocal scorer
+        with score_lock:
+            try:
+                scorer = scorer or Scorer(models_path)
+                return read_state(body, scorer)
+            except (ValueError, OSError) as exc:
+                raise HTTPException(422, str(exc)) from None
+
+    @app.get("/api/v1/scenarios/disputes")
+    def disputes(game_id: str):
+        return disputed_report(scenarios.list(game_id), game_id, stored_game(game_id)[1])
+
+    @app.get("/api/v1/scenarios")
+    def saved_scenarios(game_id: str):
+        return {"game_id": game_id, "scenarios": scenarios.list(game_id)}
+
+    @app.post("/api/v1/scenarios", status_code=201)
+    def save_scenario(body: ScenarioSave, request: Request):
+        local_only(request)
+        rows, source_id = stored_game(body.game_id)
+        return scenarios.save(body, score_scenario(body, rows), source_id, numerical_code)
+
+    @app.get("/api/v1/scenarios/{scenario_id}")
+    def saved_scenario(scenario_id: str):
+        record = scenarios.get(scenario_id)
+        if record is None:
+            raise HTTPException(404, "Scenario not found")
+        return record
+
+    @app.delete("/api/v1/scenarios/{scenario_id}", status_code=204)
+    def delete_scenario(scenario_id: str, request: Request):
+        local_only(request)
+        if not scenarios.delete(scenario_id):
+            raise HTTPException(404, "Scenario not found")
 
     @app.get("/api/v1/calculations/{calculation_id}")
     def saved_calculation(calculation_id: str):

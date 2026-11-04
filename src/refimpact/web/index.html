@@ -4,11 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#111713">
-  <title>Ref Impact — the call ledger</title>
+  <title>Ref Impact — the penalty ledger</title>
   <meta name="description" content="A transparent NFL call-impact ledger: expected points, win-probability swings and the evidence behind them.">
   <link rel="stylesheet" href="/assets/style.css">
   <script src="/assets/views.js" defer></script>
   <script src="/assets/progression.js" defer></script>
+  <script src="/assets/scenario.js" defer></script>
   <script src="/assets/app.js" defer></script>
 </head>
 <body>
@@ -20,7 +21,7 @@
   </header>
   <main class="wrap">
     <section class="hero" aria-labelledby="title">
-      <div class="hero-copy"><p class="eyebrow"><span class="accent-line"></span> THE CALL LEDGER</p><h1 id="title">A flag changes<br>the <em>equation.</em></h1><p class="hero-deck">Measure what a ruling changed. Expected points and win chance, with the alternative spelled out.</p><div class="hero-meta"><span class="live-dot"></span><span id="freshness">Connecting to the local API…</span></div></div>
+      <div class="hero-copy"><p class="eyebrow"><span class="accent-line"></span> THE PENALTY LEDGER</p><h1 id="title">A flag changes<br>the <em>equation.</em></h1><p class="hero-deck">Measure what a ruling changed. Expected points and win chance, with the alternative spelled out.</p><div class="hero-meta"><span class="live-dot"></span><span id="freshness">Connecting to the local API…</span></div></div>
       <div class="hero-stat"><span class="mini-label" id="hero-week">THIS WEEK'S SLATE</span><strong id="hero-count">—</strong><span class="hero-stat-label">penalty decisions on the ledger</span><div class="hero-stat-foot"><span id="hero-coverage">Waiting for source data</span><span class="arrow">↘</span></div></div>
     </section>
     <div id="error" class="error hidden" role="alert"></div>

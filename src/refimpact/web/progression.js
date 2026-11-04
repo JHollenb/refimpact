@@ -40,6 +40,8 @@ function renderGameExplorer(data) {
   const g=data.game;
   $('#game-detail').innerHTML=`<h2 id="dialog-title">${escapeHTML(g.away_team)} ${g.away_score??'—'} <span class="muted">at</span> ${escapeHTML(g.home_team)} ${g.home_score??'—'}</h2><p class="muted">${escapeHTML(g.gameday)} · ${g.season}, Week ${g.week} · ${escapeHTML(g.status)}</p><div class="evidence-teams">${[g.home_team,g.away_team].map(t=>teamEvidenceCard(data,t)).join('')}</div><p class="accounting-explainer">Observed offense EPA already includes penalties. Estimated penalty benefit compares rulings with alternatives; it is separate, and cannot be added to or subtracted from production to replay the game.</p>
   <h3>Cumulative EPA & win-chance history</h3><div class="history-controls"><label>Perspective <select id="history-team" aria-label="History perspective">${[g.home_team,g.away_team].map(t=>`<option value="${escapeHTML(t)}">${escapeHTML(t)}</option>`).join('')}</select></label><label>Chart <select id="history-metric" aria-label="History metric"><option value="wp">Win chance</option><option value="offense">Cumulative observed offense EPA</option><option value="penalty">Cumulative estimated penalty benefit</option><option value="drive">Cumulative observed drive EPA</option></select></label></div><div id="history-chart" class="history-chart"></div><p id="history-caption" class="footnote"></p><div id="history-focus"></div><div class="history-controls"><label>Show <select id="history-kind" aria-label="History events"><option value="all">All plays / events</option><option value="penalties">Penalties only</option><option value="drives">Drives</option></select></label><span class="muted">Select a chart point or event to inspect it.</span></div><div id="history-list"></div><button id="history-more" class="button ghost more-button hidden">Show more events</button>`;
+  $('#game-detail').insertAdjacentHTML('beforeend','<section id="whatif" class="whatif"></section>');
+  if(data.progression)initWhatIf(data);
   if(!data.progression){$('#history-chart').innerHTML='<p class="empty">Game history will appear when play-by-play is available.</p>';return;}
   state.historyLimit=35;
   drawHistory();renderHistoryList();
@@ -97,6 +99,7 @@ function focusHistoryPlay(id) {
   const {data,team}=historyState(),p=data.progression.timeline.find(p=>p.play_id===id);if(!p)return;
   const event=data.penalties.find(e=>e.id===p.penalty_id);
   $('#history-focus').innerHTML=`<section class="history-focus"><h3>Selected event · Q${p.qtr} ${escapeHTML(p.time||'')}</h3>${historyPlay(p,team,data.game.home_team)}<p class="footnote">${escapeHTML(team)} win chance changed ${signed(oriented(p.home_wp_change_from_start_pp,team,data.game.home_team),1)} pp from the first recorded state through this event. ${p.missing_offense_epa_rows[team]} offensive rows lack EPA; ${p.penalty_effects_missing} penalty effects remain unpriced.</p>${event?renderPenalty(event,team):''}</section>`;
+  if(whatIf.plays.some(play=>play.play_id===p.play_id))$('#history-focus .history-focus').insertAdjacentHTML('beforeend',`<button class="whatif-button" data-whatif-play="${escapeHTML(p.play_id)}">Edit this play in What if?</button>`);
   $('#history-focus').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 document.addEventListener('change',e=>{

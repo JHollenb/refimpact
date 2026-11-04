@@ -216,3 +216,8 @@ with sqlite3.connect(".cache/refimpact.sqlite") as db:
 For a live backup use SQLite's backup API (`source.backup(destination)`) or stop the
 server and checkpoint WAL before copying the database. Do not copy just the main DB
 file while ignoring an active WAL file.
+
+## Saved scenarios
+
+`scenarios` stores user-entered what-if requests and their computed results, with the source version, model ID and code hash used. A record whose source version is older than the active one is reported as stale; it is not recomputed silently. The table is separate from `raw_plays` and the transformed tables, is unaffected by refreshes, and is not part of the tweet queue. Evaluating a scenario writes nothing. See "What if?" in the README.
+

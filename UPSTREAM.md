@@ -32,3 +32,7 @@ https://github.com/nflverse/nflverse-data
 Model updates must explicitly change the pinned commit and both sets of compiled-in
 checksums, then rerun inference parity. Historical published values may come from a
 different model version; inspect that disagreement before enabling automated publication.
+
+`tests/fixtures/chi_sea_2026_w08.json` contains the 173 play-by-play rows of 2026 Week 8
+CHI at SEA, limited to the columns scenario timelines read, from the same public dataset:
+https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2026.parquet
