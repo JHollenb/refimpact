@@ -5,7 +5,7 @@ import hashlib
 import io
 import re
 import threading
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import date
 from pathlib import Path
 from typing import Annotated, Literal
@@ -16,8 +16,11 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import Field
 from starlette.middleware.gzip import GZipMiddleware
 
+from refimpact.conversion import FORM_COLUMNS, Conversion, SeasonForm, form_frame
 from refimpact.decisions import DecisionRequest, evaluate_decision
+from refimpact.gameview import game_view, week_card
 from refimpact.models import MODEL_ID, Scorer
+from refimpact.outcomes import OutcomeRequest, evaluate_outcome
 from refimpact.pipeline import code_digest, execute_transform, request_transform
 from refimpact.scenarios import (
     ChainError,
@@ -90,6 +93,8 @@ def create_app(
     scorer = None
     score_lock = threading.Lock()
     kick_spots: dict[str, float | None] = {}
+    season_forms: dict[str, SeasonForm] = {}
+    conversion_fit: Conversion | None = None
 
     @app.middleware("http")
     async def revision_cache(request, call_next):
@@ -98,6 +103,8 @@ def create_app(
             and request.url.path.startswith("/api/v1/")
             and not request.url.path.startswith("/api/v1/transforms")
             and not request.url.path.startswith("/api/v1/scenarios")
+            and not request.url.path.startswith("/api/v1/weeks/")
+            and not request.url.path.endswith("/view")
             and request.url.path not in {"/api/v1/data/schema", "/api/v1/data/calculations"}
         )
         etag = None
@@ -620,6 +627,78 @@ def create_app(
         if calculation is None:
             raise HTTPException(404, "Calculation not found")
         return calculation
+
+    @app.get("/api/v1/weeks/{season}/{week}")
+    def week_page(season: int, week: int):
+        data = results.read(season, week, sections=("penalties",), detail=False)
+        season, week, rows = selection(data, season, week)
+        events = defaultdict(list)
+        for event in data.get("penalties", []):
+            events[event["game_id"]].append(event)
+        return {
+            "season": season,
+            "week": week,
+            "games": [week_card(g, events[g["game_id"]]) for g in rows],
+        }
+
+    @app.get("/api/v1/games/{game_id}/view")
+    def game_page(game_id: str):
+        data = results.read(
+            int(game_id[:4]) if game_id[:4].isdigit() else None,
+            all_weeks=True,
+            game_id=game_id,
+            sections=("penalties", "drives"),
+        )
+        game = next((g for g in data["games"] if g["game_id"] == game_id), None)
+        if game is None:
+            raise HTTPException(404, "Game is not present in the database")
+        if not game.get("pbp_available"):
+            return {"game": game, "card": None, "chart": [], "flags": [], "drives": []}
+        rows, _ = stored_game(game_id)
+        events = [e for e in data.get("penalties", []) if e["game_id"] == game_id]
+        drives = [d for d in data.get("drives", []) if d["game_id"] == game_id]
+        return game_view(game, rows, events, drives)
+
+    def season_form(source_id: str) -> SeasonForm:
+        if source_id not in season_forms:
+            with database.connect() as db:
+                columns = ", ".join(FORM_COLUMNS)
+                source = db.execute(
+                    f"SELECT {columns} FROM raw_plays WHERE source_id=?", (source_id,)
+                )
+                frame = form_frame([dict(r) for r in source])
+            season_forms[source_id] = SeasonForm(frame, conversion())
+        return season_forms[source_id]
+
+    def conversion() -> Conversion:
+        nonlocal conversion_fit
+        conversion_fit = conversion_fit or Conversion()
+        return conversion_fit
+
+    @app.post("/api/v1/plays/outcome")
+    def play_outcome(body: OutcomeRequest):
+        nonlocal scorer
+        rows, source_id = stored_game(body.game_id)
+        data = results.read(
+            int(body.game_id[:4]),
+            all_weeks=True,
+            game_id=body.game_id,
+            sections=("penalties",),
+        )
+        event = next((e for e in data.get("penalties", []) if e["play_id"] == body.play_id), None)
+        with score_lock:
+            try:
+                scorer = scorer or Scorer(models_path)
+                if source_id not in kick_spots:
+                    kick_spots[source_id] = season_kick_spot(database, source_id)
+                kick_spot = kick_spots[source_id]
+                if kick_spot is None:
+                    raise ValueError("No measured post-kick spot for this season")
+                return evaluate_outcome(
+                    rows, body, scorer, conversion(), season_form(source_id), kick_spot, event
+                )
+            except (ValueError, OSError) as exc:
+                raise HTTPException(422, str(exc)) from None
 
     @app.get("/api/v1/math", include_in_schema=True)
     def math_documentation():

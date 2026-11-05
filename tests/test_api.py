@@ -74,7 +74,7 @@ def client(snapshot):
 
 def test_dashboard_assets_and_documentation(client):
     assert client.get("/").status_code == 200
-    assert "A flag changes" in client.get("/").text
+    assert "Ref Impact" in client.get("/").text
     for url in ["/assets/app.js", "/assets/style.css", "/docs", "/openapi.json"]:
         assert client.get(url).status_code == 200
     assert client.get("/api/v1/methodology").json()["correctness_assessed"] is False
@@ -271,4 +271,4 @@ def test_game_progression_endpoint_keeps_probability_and_penalty_ledger_separate
     assert client.get("/api/v1/games/not-present/progression").status_code == 404
     future_id = data["games"][1]["game_id"]
     assert client.get(f"/api/v1/games/{future_id}/progression").json()["progression"] is None
-    assert client.get("/assets/progression.js").status_code == 200
+    assert client.get("/assets/app.js").status_code == 200

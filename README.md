@@ -18,11 +18,12 @@ comparisons and full precision estimates are retained separately from tweets.
 
 ## Local dashboard and API
 
-The dashboard shows scores, all reported flag dispositions, accept/decline alternatives,
-offensive and defensive production, drive EPA timelines, and game-level relationships. It defaults to the latest NFL slate
-that has started as of the generation cutoff, with explicit date ranges and a week selector.
-On a Tuesday this includes the just-completed Thursday–Monday slate; upcoming weeks
-remain available with missing impact values rather than invented zeros.
+The dashboard is a week of games, each with its biggest call and its big calls by team. Open a game
+for a win-chance chart with a dot on each flag, then its drives, each with win chance in both models
+at the end. Open a drive for its plays. Any play can take a different result, which shows win chance
+against what was recorded, the chance of a first down and several measures of the chance of scoring.
+See [Change any play's outcome](#change-any-plays-outcome). It defaults to the latest NFL slate that
+has started as of the generation cutoff.
 
 ```sh
 uv sync --locked
@@ -115,19 +116,63 @@ The API is local and unauthenticated. It exposes no tweet-publishing, credential
 arbitrary-file or arbitrary-URL endpoints. If you later expose it beyond loopback,
 add the access controls appropriate for that deployment.
 
-## What if? Enter a play yourself
+## Change any play's outcome
 
-The penalty ledger below values flags that were thrown; it does not say whether a call was
-right, and a no-call never appears in play-by-play. To test a disputed moment, open a game and
-use **What if?** Pick any play, including one with no flag. Its fields start at what was
-recorded next (possession, down, distance, yard line, quarter, clock, scores and timeouts).
-Change them to what you think should have happened and the card compares win chance and points
-against the recorded state at that moment.
+Open a game, open a drive, and choose **Change outcome** on any play: a run or pass, a flag, a punt,
+a kickoff, a field goal or a try. Each play type offers its own results, such as a gain or loss in
+yards, a first down, a touchdown or a turnover at a spot, and a flag can read "No flag".
 
-Then choose how that drive ends (TD + XP, TD + 2-pt, field goal or no score) to draw an
-alternate timeline. The rest of that drive is replaced. Later drives keep their recorded states
-on a shifted scoreboard, and each later snap is re-scored by the same published WP model. Add
-more plays to stack edits; each is valued on the scoreboard the earlier ones produced.
+That drive then stops at your result. Later drives stay exactly as recorded, with no score carried
+forward, and the chart keeps its recorded line with one marker at your edit. Each drive can hold one
+edit, and edits last until you reset them or reload.
+
+The result shows:
+
+- **Win chance**, recorded and yours, in both models, at the same clock.
+- **Chance of a first down** for whoever has the ball: the league rate from that down, distance and
+  zone, then what the offense's and defense's last 4 games and this game's momentum changed. On 4th
+  down it reads "if they go for it", with how often the league does.
+- **Chance of scoring**: next score of the half (nflfastR), this drive in league history, this drive
+  for these teams, expected points, and how the offense has finished drives lately.
+
+```sh
+curl -X POST http://127.0.0.1:8787/api/v1/plays/outcome \
+  -H 'Content-Type: application/json' \
+  --data '{"game_id":"2026_08_CHI_SEA","play_id":"3158","kind":"no_flag"}'
+```
+
+Removing the flag from that play gives SEA 8% rather than 22%, the −15 pp worked example in
+`/api/v1/math`. Nothing is stored; each request reads the state and returns.
+
+The first-down and this-drive chances are a fit of our own on 2024-2026, scored on later seasons,
+in sections 13 and 14 of `/api/v1/math`. Team terms help only slightly on later seasons, and
+momentum reads as how the game is going, not a streak; the page prints its measured size. Overtime
+plays can be edited, but your version gets no win chance there because porting upstream's overtime
+rule didn't reproduce its published values.
+
+To refit, fetch `play_by_play_{2024,2025,2026}.parquet` to Beast and run
+`scripts/fit_conversion/submit.py`, then copy its `conversion.json` to `src/refimpact/data/` and
+`gates.json` to `docs/conversion-gates.json`.
+
+| Endpoint | Result |
+| --- | --- |
+| `GET /api/v1/weeks/{season}/{week}` | Week cards: biggest call and big calls by team |
+| `GET /api/v1/games/{id}/view` | Chart, flags, drives and plays with their result menus |
+| `POST /api/v1/plays/outcome` | A chosen result's state, win chance, first-down and scoring chances |
+
+## What if? API
+
+These endpoints have no page in the dashboard now. They keep the earlier approach: hold later plays
+as played on a shifted scoreboard, chain user-authored states, and save disputed calls.
+
+The penalty ledger values flags that were thrown; it does not say whether a call was right, and a
+no-call never appears in play-by-play. `POST /api/v1/scenarios/evaluate` takes changes to the state
+recorded after any play, including one with no flag, and compares win chance and points against the
+recorded state at that moment.
+
+A `drive_result` (TD + XP, TD + 2-pt, field goal or no score) draws an alternate timeline. The rest of that drive is replaced. Later drives keep their recorded states
+on a shifted scoreboard, and each later snap is re-scored by the same published WP model. Further
+edits stack; each is valued on the scoreboard the earlier ones produced.
 
 ```sh
 curl -X POST http://127.0.0.1:8787/api/v1/scenarios/evaluate \
@@ -151,20 +196,18 @@ them. A blank state gets a win chance with no timeline. `drive_team` names who a
 belongs to; the dashboard and API default to the team with the ball in the edited state, and
 warn when that differs from the team that ran the play.
 
-**Stacking: a prediction timeline.** Each alternate point has a **What if from here?** button. It
-opens a step prefilled from the alternate state: after a score, the other team's ball at the
+**Stacking: a prediction timeline.** A `chain` leaves the alternate timeline at one point and
+continues through states you supply, each starting from the alternate state: after a score, the other team's ball at the
 season's measured post-kick spot, with the score updated; after no score, the other team's ball.
-You set the state and how that drive ended, and add more. Each node shows win chance, Vegas win
-chance, EP, the swing from the node before, downs and next-score TD and FG chances. You can remove
-the last step, or go back to an earlier node and continue, which replaces what came after. There is
-one active path.
+You set the state and how that drive ended. Each node returns win chance, Vegas win chance, EP, the
+swing from the node before, downs and next-score TD and FG chances.
 
 A chain ends one of two ways, and they are not mixed. **Prediction**, the default, stops at the last
 node: no recorded plays follow, no final score is given, and the win chance is conditional on your
 steps. **Rejoin** holds recorded plays from a later play you pick, with scores shifted, and is
 labeled hindsight. No chance of reaching a path is computed: the steps are your choices, not a
 forecast. The clock cannot run backward, scores cannot fall, and overtime is refused, each with an
-error on the field. Chains save with a scenario but are left out of the disputed-calls report and
+error. Chains save with a scenario but are left out of the disputed-calls report and
 are never posted. A zero-change branch reproduces its source state exactly.
 
 ```sh
@@ -181,13 +224,13 @@ curl -X POST http://127.0.0.1:8787/api/v1/scenarios/evaluate \
 SEA's win chance reads 30% at the changed call, 31% with CHI's ball after the extra point and 39%
 with a stop and SEA's ball at Q4 12:30. Vegas reads 38%, 33% and 41%.
 
-Each edit also shows the **opportunity** view: downs in hand and the next-score TD, FG and no-score
+Each edit also returns the **opportunity** view: downs in hand and the next-score TD, FG and no-score
 chances, for the recorded state and yours. Extra downs flip field goals into touchdowns; see
 sections 10 and 11 of `/api/v1/math` for the measured goal-line results and the heat panel.
 
-Save a scenario with a label, type, assumptions and source link. Marking it disputed requires a
-source and adds it to the game's **Disputed calls** report, which gives the sum of at-the-moment
-expected points for those calls. That sum is not a final margin. Win-chance swings are not added.
+`POST /api/v1/scenarios` saves one with a label, type, assumptions and source link. Marking it
+disputed requires a source and adds it to `/api/v1/scenarios/disputes`, which gives the sum of
+at-the-moment expected points for those calls. That sum is not a final margin. Win-chance swings are not added.
 A source shows who disputes a call, not that the call
 was wrong, and this tool never decides that. Report only what you have looked for: disputes
 collected for one team alone will lean toward that team.
@@ -203,36 +246,21 @@ compute one, but only this computer can save or delete, because the LAN server h
 | `GET` / `POST /api/v1/scenarios`, `GET` / `DELETE /api/v1/scenarios/{id}` | Saved scenarios |
 | `GET /api/v1/scenarios/disputes?game_id=...` | Disputed calls and their summed expected points |
 
-## Reading the scoreboard and game history
+## Reading the week and game pages
 
-The scoreboard leads with **each game's biggest flag swings**: one flag's effect on win chance
-when it happened, against keeping the described play, in whole points. Swings under 2 pp are within
-model noise, and the spread (Vegas) model is shown beside the non-Vegas one. Inside 2:00 a swing
-also reports a clock range; see `/api/v1/math`. Swings of 5+ pp are counted, unpriced flags are
-counted beside them, and swings are never added together.
+Each week's card leads with **the game's biggest call**: one flag's effect on win chance when it
+happened, against keeping the described play, in whole points, signed to the team it helped. **Big
+calls** counts flags of 5+ pp by the team each helped. Swings under 2 pp are within model noise,
+unpriced flags are counted beside these figures, and swings are never added together. Inside 2:00
+a swing also carries a clock range; see `/api/v1/math`.
 
-The **expected margin shift, ignores score** is a known-effects comparison ledger across both
-possessions. EP has no score input, so a blowout flag counts in full. It measures what penalties
-were worth, not what officials did: a correct flag on a real foul counts as a benefit to the other
-team. **Observed offense EPA · includes penalties** is actual scrimmage production. These are
-separate measurements, not components to add together.
-
-A game's **How the game went** panel gives each team's EPA over its last 5 snaps, big plays over
-its last 10 and the current scoring run. It describes the game so far, is not a forecast, and
-feeds no value.
-For CHI at SEA in Week 8, SEA's +14.16 estimated benefit consists of +13.97 while SEA had
-the ball and +0.19 while CHI had it. SEA's observed offensive EPA is -7.75, already
-including actual penalties. The local comparison sum cannot be subtracted to replay a
-penalty-free game. Unknown effects are disclosed in coverage counts.
-
-Open a game to select either team's perspective and explore:
-
-- Native win chance at recorded game states, with before/after changes in percentage points.
-- Cumulative observed offensive EPA (including penalties).
-- Cumulative estimated penalty benefit, in a separate ledger across both possessions.
-- Cumulative observed drive EPA at each drive ending.
-- Every play/event, just penalties, or drive summaries. Select a chart point or event
-  for its EPA, cumulative totals, actual win-chance change, and ruling alternatives.
+The game page also gives **flags net, ignoring score**, a known-effects comparison ledger across both
+possessions. EP has no score input, so a blowout flag counts in full. It measures what penalties were
+worth, not what officials did: a correct flag on a real foul counts as a benefit to the other team.
+Observed offense EPA, returned by the API, is actual scrimmage production. These are separate
+measurements, not components to add together. For CHI at SEA in Week 8, SEA's +13.70 net is +13.32
+while SEA had the ball and +0.38 while CHI had it, and SEA's observed offensive EPA already includes
+penalties. The local comparison sum cannot be subtracted to replay a penalty-free game.
 
 Actual progression comes from nflverse's non-Vegas nflfastR `home_wp` and
 `home_wp_post`, normalized to the selected team. A 40% to 45% movement is +5 pp.
@@ -254,7 +282,7 @@ replay reports save `progression.json` alongside the original production and dri
 
 ## Relationship with score and winning
 
-The metric selector compares one of three home-oriented values with final home score
+`GET /api/v1/analysis` compares one of three home-oriented values with final home score
 margin, once per game: the expected margin shift (net measured enforcement EPA), home minus away offensive
 EPA per snap, or home minus away observed drive EPA. Defense allowed mirrors the
 opponent's offensive production; it is not an independent second contribution to add.

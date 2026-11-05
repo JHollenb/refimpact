@@ -17,8 +17,13 @@ Feature encoding and point weights translated from `nflverse/nflfastR` commit
 - `R/ep_wp_calculators.R`: `calculate_expected_points`, `calculate_win_probability`
 - https://github.com/nflverse/nflfastR/tree/701bbf38bc1c030ff9f1f4825a23191287d3903c
 
-The models are loaded as published. No fitting, private data, proprietary model,
+The models are loaded as published and never refit. No private data, proprietary model,
 LLM-generated statistic, or heuristic EP-to-WP conversion is used.
+
+The only fit here is separate from them: `src/refimpact/data/conversion.json`, from
+`scripts/fit_conversion`, holds first-down and this-drive chance tables and team terms, fit on
+public nflverse play-by-play for 2024-2026. It values no flag and feeds no win chance or expected
+points. Its results on later seasons are in `docs/conversion-gates.json`.
 
 `tests/fixtures/published.json` contains sixteen ordinary scrimmage rows from 2024
 Week 1 nflverse play-by-play, spanning four games, four quarters, and a neutral venue.

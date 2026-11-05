@@ -1,54 +1,26 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#111713">
-  <title>Ref Impact — the penalty ledger</title>
-  <meta name="description" content="A transparent NFL call-impact ledger: expected points, win-probability swings and the evidence behind them.">
-  <link rel="stylesheet" href="/assets/style.css">
-  <script src="/assets/views.js" defer></script>
-  <script src="/assets/progression.js" defer></script>
-  <script src="/assets/scenario.js" defer></script>
-  <script src="/assets/app.js" defer></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Ref Impact</title>
+<meta name="description" content="What NFL flags did to win chance, game by game, and what a different result on any play would read.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/assets/style.css">
+<script src="/assets/app.js" defer></script>
 </head>
 <body>
-  <a class="skip" href="#games">Skip to games</a>
-  <header class="masthead wrap">
-    <a class="brand" href="/" aria-label="Ref Impact home"><span class="brand-icon" aria-hidden="true">⚑</span> REF<span>IMPACT</span><span class="version">NFL / 01</span></a>
-    <nav aria-label="Main navigation"><a href="#games">The games</a><a href="#relationship">The relationship</a><a href="#method">The method</a><a href="/api/v1/math" target="_blank" rel="noopener">Equations ↗</a><a href="/docs" target="_blank" rel="noopener">API ↗</a></nav>
-    <div class="local-badge"><span></span> LOCAL EDITION</div>
-  </header>
-  <main class="wrap">
-    <section class="hero" aria-labelledby="title">
-      <div class="hero-copy"><p class="eyebrow"><span class="accent-line"></span> THE PENALTY LEDGER</p><h1 id="title">A flag changes<br>the <em>equation.</em></h1><p class="hero-deck">Measure what a ruling changed. Expected points and win chance, with the alternative spelled out.</p><div class="hero-meta"><span class="live-dot"></span><span id="freshness">Connecting to the local API…</span></div></div>
-      <div class="hero-stat"><span class="mini-label" id="hero-week">THIS WEEK'S SLATE</span><strong id="hero-count">—</strong><span class="hero-stat-label">penalty decisions on the ledger</span><div class="hero-stat-foot"><span id="hero-coverage">Waiting for source data</span><span class="arrow">↘</span></div></div>
-    </section>
-    <div id="error" class="error hidden" role="alert"></div>
-    <section class="control-bar" aria-label="Results filters">
-      <div class="period"><label for="week">THE SLATE</label><select id="week" aria-label="NFL season and week"></select><span id="date-range" class="muted"></span></div>
-      <div class="controls-right"><label class="sr-only" for="team">Filter games by team</label><select id="team"><option value="">All teams</option></select><label class="sr-only" for="disposition">Penalty disposition</label><select id="disposition"><option value="">All flags</option><option value="accepted">Accepted</option><option value="declined">Declined</option><option value="offsetting">Offsetting</option><option value="unknown">Unknown</option></select><button id="reload" class="button ghost">↻ Reload view</button><a id="export" class="button" href="/api/v1/export.csv">Export CSV ↗</a></div>
-    </section>
-    <section id="games" class="section" aria-labelledby="games-title">
-      <div class="section-heading"><div><p class="eyebrow">01 / THE SCOREBOARD</p><h2 id="games-title">Every game. The measured calls.</h2></div><span class="section-note">Cards lead with each game's biggest flag swings in win chance.</span></div>
-      <div id="game-grid" class="game-grid" aria-live="polite"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
-      <p class="footnote">All reported flags are retained, including declined and offsetting calls. Missing spots and timing are shown as scenarios or unknown values. The expected margin shift covers both possessions, ignores score, and is separate from observed offense EPA, which already includes penalties. Do not add or subtract these to reconstruct a penalty-free game. Open a game for cumulative EPA and win-chance history.</p>
-    </section>
-    <section id="production" class="section" aria-labelledby="production-title"><div class="section-heading"><div><p class="eyebrow">PRODUCTION / BOTH SIDES OF THE BALL</p><h2 id="production-title">What the teams produced.</h2></div><span class="section-note">Defensive EPA allowed: lower is better.</span></div><div class="table-wrap"><table><thead><tr><th>TEAM / GAME</th><th>OBSERVED OFFENSE EPA · INCLUDES PENALTIES</th><th>OFFENSE EPA / SNAP</th><th>DEFENSE EPA ALLOWED / SNAP</th><th>OBSERVED DRIVE EPA</th></tr></thead><tbody id="production-rows"></tbody></table></div><p class="footnote">Observed offense EPA already includes penalties. It counts scrimmage plays and penalty-only scrimmage rows; punts, field goals, kickoffs and tries are excluded. Snap rates use run/pass/kneel/spike plays. Drive EPA also includes punt/field-goal endings.</p></section>
-<section id="relationship" class="section relationship" aria-labelledby="relationship-title">
-      <div class="section-heading"><div><p class="eyebrow">02 / THE BIGGER QUESTION</p><h2 id="relationship-title">Does the benefit follow the win?</h2></div><div class="analysis-controls"><label class="sr-only" for="metric">Relationship metric</label><select id="metric"><option value="penalty_epa">Margin shift (ignores score)</option><option value="production_epa">Offense / defense production</option><option value="drive_epa">Drive EPA</option></select><div class="segmented" aria-label="Analysis period"><button id="scope-week" class="selected" aria-pressed="true">This slate</button><button id="scope-season" aria-pressed="false">Season to date</button></div></div></div>
-      <div class="relationship-layout"><div class="plot-panel"><div class="plot-head"><span id="plot-metric-label">EXPECTED MARGIN SHIFT × FINAL MARGIN</span><span><i class="legend-dot"></i> One dot = one game</span></div><div id="scatter" class="scatter" aria-label="Scatter plot of net home EPA and final home score margin"></div><p id="plot-caption" class="plot-caption">Right: more measured benefit to the home team. Up: a larger home win. Select a dot to inspect the game.</p></div><aside class="association"><p class="mini-label">DESCRIPTIVE ASSOCIATION</p><div class="correlation"><strong id="correlation">—</strong><span>Pearson r</span></div><p id="interval" class="muted"></p><div class="association-rule"></div><p id="win-rate" class="win-rate">—</p><p id="analysis-note" class="muted"></p><p class="small-note">Association is not causation. Teams, game state and the calls we cannot score can all influence this pattern.</p></aside></div>
-      <details class="analysis-details"><summary>How to read this comparison</summary><p>Each game appears once, in the home-team direction. We compare the expected margin shift (net measured EPA, which ignores score) with the final score margin. Games with incomplete play-by-play or no value for the selected metric are excluded. A tie or zero net benefit is excluded only from the “benefited team won” count.</p><p>The interval resamples games and is exploratory; the same teams recur across games. This analysis does not control for team strength, penalty opportunities, coaching or game state. Win probability itself already uses the score and clock, so its relationship with winning is partly built into the model. We use EPA for this comparison instead of adding win-probability swings.</p></details>
-    </section>
-    <section class="section" aria-labelledby="calls-title">
-      <div class="section-heading"><div><p class="eyebrow">03 / THE MOMENTS</p><h2 id="calls-title">Every flag, including declined.</h2></div><span class="section-note">Accept, decline and no-flag branches stay separate.</span></div>
-      <div class="table-wrap calls-table"><table><thead><tr><th>GAME / CLOCK</th><th>RULING / DISPOSITION</th><th>TEAM PERSPECTIVE</th><th>WIN-CHANCE SWING AT THE MOMENT</th><th>EXPECTED POINTS · IGNORES SCORE</th><th>CHOICE EDGE</th><th></th></tr></thead><tbody id="call-rows"></tbody></table></div><button id="more-penalties" class="button ghost more-button">Show more flags</button>
-      <p class="footnote">A swing of +5 pp means 40% → 45%, for example. Each estimate is relative to the stated alternative ruling. Win chance is shown in whole points, and swings under 2 pp are within model noise. The Vegas model is the same upstream family with the pregame spread added; the two can disagree.</p>
-    </section>
-    <section id="drives" class="section"><div class="section-heading"><div><p class="eyebrow">DRIVE LEDGER / THE FULL SEQUENCE</p><h2>Production, flags, and the finish.</h2></div><label>Show <select id="drive-filter"><option value="flagged">Drives with flags</option><option value="all">All drives</option></select></label></div><div class="table-wrap"><table><thead><tr><th>GAME / DRIVE</th><th>OFFENSE</th><th>START</th><th>RESULT</th><th>OBSERVED DRIVE EPA</th><th>CUMULATIVE DRIVE EPA</th><th>OFFENSE WIN CHANCE / CHANGE</th><th>EXPECTED MARGIN SHIFT · IGNORES SCORE</th><th></th></tr></thead><tbody id="drive-rows"></tbody></table></div><button id="more-drives" class="button ghost more-button">Show more drives</button><p class="footnote">Drive EPA sums observed play EPA, including punt/field-goal endings. Penalty effects are shown alongside, not added to the total. Open a drive to inspect every play and each penalty alternative.</p></section>
-<section id="method" class="method section" aria-labelledby="method-title"><div><p class="eyebrow">04 / SHOW YOUR WORK</p><h2 id="method-title">A comparison.<br>With its assumptions attached.</h2><a href="/docs" target="_blank" rel="noopener" class="text-link">Explore the open API ↗</a></div><div class="method-steps"><article><span>01</span><div><h3>Reconstruct the states</h3><p>Compare enforcement with an explicit alternative. Compare accept, decline and no-flag outcomes. A missing foul spot produces labeled scenarios; a reported runoff explicitly changes the clock.</p></div></article><article><span>02</span><div><h3>Score both possibilities</h3><p>Open-source nflfastR models estimate expected points and win probability from field position, down, distance, clock and game context.</p></div></article><article><span>03</span><div><h3>Keep the boundaries visible</h3><p>All reported dispositions are retained. Missing evidence stays visible, and clock-delay scenarios are conditional. This measures consequences, not correctness. Data is postgame.</p></div></article></div></section>
-  </main>
-  <footer class="wrap"><span class="brand small">REF<span>IMPACT</span></span><span>Built on nflverse + nflfastR. Open data, explicit alternatives.</span><a href="https://nflreadr.nflverse.com/articles/nflverse_data_schedule.html" target="_blank" rel="noopener">Source availability ↗</a></footer>
-  <dialog id="game-dialog" aria-labelledby="dialog-title"><div class="dialog-top"><span class="eyebrow">THE GAME FILE</span><button id="close-dialog" class="close" aria-label="Close game details">×</button></div><div id="game-detail"></div></dialog>
+<a class="skip" href="#app">Skip to content</a>
+<header class="site-header">
+  <div class="page"><a class="brand" href="#/">Ref Impact</a></div>
+</header>
+<main class="page" id="app"><p class="notice">Loading…</p></main>
+<footer>
+  <div class="page footnote">
+    <p>Model estimates. Doesn't judge whether a call was right.</p>
+    <nav aria-label="Reference"><a href="/api/v1/math">How this works</a><a href="/docs">API docs</a></nav>
+  </div>
+</footer>
 </body>
 </html>

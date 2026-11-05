@@ -1,8 +1,10 @@
 # Ref Impact: mathematical definitions
 
-Version 0.4. Every quantity below is descriptive or a conditional model comparison.
-The pipeline uses the pinned open-source nflfastR/fastrmodels models documented in
-`UPSTREAM.md`. We do not fit a model or convert EPA into win probability with a constant.
+Version 0.5. Every quantity below is descriptive or a conditional model comparison.
+Win chance and expected points come from the pinned open-source nflfastR/fastrmodels models
+documented in `UPSTREAM.md`, which are not refit, and EPA is never converted into win probability
+with a constant. The one fit of our own is the first-down and this-drive chance in section 14. It
+values no flag and feeds no win chance.
 All missing/unsupported values are SQL NULL / JSON null, unless an identity establishes
 an exact zero. Known-only sums disclose missing counts.
 
@@ -481,3 +483,73 @@ So the EP model already prices the extra downs, and no adjustment is applied.
 
 Each game shows, for each team, the sum of native EPA on its last 5 scrimmage snaps (penalties included), big plays in its last 10 snaps (a run of 10+ yards or a completed pass of 20+ yards), and the current scoring run (points since the opponent last scored). There is no strength adjustment. This describes the game so far. It is not a forecast and feeds no value. Measured on 2025 and 2026 play-by-play (n=44,902): one standard deviation of last-5 EPA goes with +0.011 EPA on the next snap (90% CI .001 to .022), and the team's following 5 snaps "predict" the current one just as well (+.012), so it reflects game-level form rather than a streak.
 
+## 12. The week headline
+
+Each game's card leads with its **biggest call**: `max |I^WP|` over priced flags that took effect, signed to the team it helped, with the moment. Beside it is the count of **big calls**, priced flags of at least 5 pp, split by the team each helped. Counts add; swings never do. A single at-the-moment swing cannot say who would have won, and neither can the count.
+
+The game page also gives the net of all priced flags in expected points, labeled as ignoring score. It isn't the headline because, measured in the 2026-11-03 audit, three-score flags are 10.5% of its absolute total and 1.4% of absolute win-chance swing. Flags without a price are counted beside these figures, never as zero.
+
+## 13. Changing a play's outcome
+
+Any recorded play can take a different result: a run, pass, kneel or spike; a flag-only row with a down; a punt, kickoff or field goal; an extra point or two-point try. Rows that aren't plays (timeouts, quarter ends, comments) are not listed.
+
+A result becomes a post-play state from the row's pre-snap state `b`, by the rules in section 3. A gain `x` gives `y' = y - x`. If `x >= g` it is first down with `g' = min(10, y')`; otherwise `d' = d + 1` and `g' = g - x`. A failed fourth down hands the opponent first down at `100 - y'`. `y' <= 0` is a touchdown and `y' >= 100` a safety.
+
+- **Scores** put the points on the board and give the other team the ball at the season's measured post-kick spot, with the extra point assumed good. A try's result is 0, 1 or 2 points on the same terms.
+- **Punts and kickoffs** give the receiving team first down at the chosen spot, with touchbacks at the 20 on punts and at the season's measured spot on kickoffs. An onside recovery or muff goes to the kicking team.
+- **A missed field goal** gives the opponent the spot of the kick (`y + 8`) or its own 20, whichever is better for it.
+- **A safety** gives the defense 2 points and the ball at the season's measured mean spot after the kick: 58 yards from goal in 2024 (17 kicks) and 48 in 2025 (10 kicks). A season with under 10 kicks, such as 2026 (2 kicks), borrows the latest season with enough and is labeled approximate.
+- **No flag** uses the flag's priced play-as-written branch from section 3, offered only where one exists.
+
+Both branches use the next recorded snap's clock, because the time a different result would have taken is not recorded. With no later snap in the half, both read at the play's own clock and the page says so.
+
+**The drive stops there.** The edited drive ends at that state and later drives stay exactly as recorded: no score is carried forward, no later play is re-read, and the recorded win-chance line is not redrawn. The comparison is `WP(yours) - WP(recorded next)`, in both models, along with the change in margin plus expected points. Each of these is an at-the-moment reading.
+
+**Overtime.** Overtime plays can be edited. Win chance is not given for your version, because the port of upstream's overtime rule missed published win chance by over 1 pp on 215 of 368 stored overtime rows (measured; maximum 47 pp), so it isn't used. The expected-points classes match published on 349 of those rows, so those and the chances in section 14 are given.
+
+**Play and drive changes.** A play's change runs from its win chance to the next listed play's, so a game's changes add up exactly. Native `home_wp_post` is not used for this: on `no_play` rows it disagrees with the next row by more than 0.1 pp on 131 of 2,665 rows in 2024, by up to 35 pp, and on no other row kind (measured). Flag dots show the ruling's swing against its alternative, a different baseline, and the tooltip shows both. A drive's change runs from its first scrimmage or penalty row to its last assigned event, and the changes across drives don't add to the game's because a kickoff return can fall between them. Vegas win chance is shown beside the main model everywhere. Its Brier score on run and pass rows is lower, .137 in 2024 and .168 in 2026 against .157 and .179 (measured; a tie counts as .5).
+
+## 14. Chance of a first down and of scoring
+
+**Fit.** Tables and coefficients come from `scripts/fit_conversion`, on 2024, 2025 and 2026 weeks 1-8. It is rolling origin: fit 2024 and score 2025, then fit 2024-25 and score 2026. The second fit ships; every number below that says "later seasons" comes from those two scores. `docs/conversion-gates.json` holds them all.
+
+**Target.** On downs 1 to 3 the chance is that this series earns a new first down or touchdown (nflverse `series_success`). Series cut off by the half or ended by kneeling are left out, since they are censored and not failures. A smaller line gives the chance this snap converts. On 4th down the series is mostly a kicking decision, so the headline is "if they go for it", on run and pass rows only, beside the league's go rate. Teams that go chose to, so that is the rate for teams like them, not for a forced attempt.
+
+**Model.** With `p0` the league rate from a table by down, 14 to-go buckets and 6 field zones (m-estimate toward its parent, `k = 50`, with `n` shown):
+
+\[
+\text{logit } p = \text{logit } p_0 + \alpha + \beta_O O_P + \beta_D D_Q + \beta_M M_P + \beta_R M_Q
+\]
+
+`O` and `D` are each team's shrunken EPA per play over its last 4 games before this one, in league SDs, with good positive. Byes are skipped, this game is excluded, second-half rows outside 5-95% win chance are dropped, and values are centered on the season. Shrinkage is `(n m + k r X_prev) / (n + k)`, where `X_prev` is the team's previous season, `r` its measured year-to-year correlation (.39 for both) and `k` = 277 plays, measured from play and team-season variance.
+
+`M_P` is the offense's native EPA over its last 5 scrimmage snaps before this play, in SDs. `M_Q` is the same for the other team's offense. A term for what this defense allowed recently cannot be separate: in one game a defense has only faced this offense, so it equals `-M_P` exactly (measured on all rows).
+
+The listed changes apply each term in turn, so they add up to the chance.
+
+**Fitted (shipped, series target; 90% intervals from a game-cluster bootstrap).** Per SD in log-odds: offense +.095 (.075 to .119), defense −.065 (−.086 to −.042), momentum +.039 (.014 to .059), other offense's momentum +.038 (.019 to .058).
+
+**Results on later seasons.**
+
+| target | lift in log-loss, 2025 | lift, 2026 | ECE | max decile gap | team terms applied |
+|---|---:|---:|---:|---:|---|
+| Series | −.0017 | −.0022 | .006 | .018 | yes |
+| This snap | −.0008 | −.0008 | .006 | .014 | yes |
+| This drive | −.0045 | −.0018 | .020 | .062 | yes |
+| 4th down, go | +.0020 | −.0045 | .035 | .064 | no |
+
+Team terms apply when they improve log-loss on both later seasons, point the right way with intervals clear of zero, and are no less calibrated than the table alone. The advisor's stricter bar of −.002 on both seasons was set for a nine-season fit and is missed narrowly on series; it is reported here. The pass and run matchup variant lost on 2025 and is not used. Fourth-down team terms lost on 2025, so the 4th-down reading is the table alone. This-drive chances run about 2 pp off on average and up to 6 pp at the low end, where predicted .17 was observed .11, and are less reliable in blowouts.
+
+**Momentum.** The own-offense term is about 1.0 pp per SD (0.4 to 1.5). A placebo using the same team's snaps after this drive ends comes out larger (+.066, .041 to .092) and those snaps cannot cause this one, so it reads as how the game is going, not a streak. It stays in at its fitted size, whatever that size says, and the page prints it. Dropping both momentum terms costs .0001 to .0006 in log-loss for series and snap on later seasons. The this-drive model carries a larger term, +.157 per SD (.129 to .179), and dropping it costs .0011 to .0022. That term reads the current drive's own snaps too, so it says even less about a streak.
+
+**Team words.** "Top 5" and "bottom 5" come from ranking every team over its own last 4 games on ten metrics, with minimum sample sizes. They describe the inputs. The number that moves the chance is the offense or defense term.
+
+**Ways to measure scoring**, all for the team with the ball in your version:
+
+- *Next score is a touchdown or field goal*: the pinned EP model's classes. It spans any number of drives in the half.
+- *This drive scores, league history*: share of rows from the same cell with `fixed_drive_result` of Touchdown or Field goal, separated by whether over 5 minutes remain in the half. An end-of-half drive counts as no score, so late readings are labeled.
+- *This drive scores, these teams*: the same logistic form with this rate as its offset.
+- *Expected points*: the pinned EP value, in points, net of the opponent's next score.
+- *Finishing drives*: over the offense's last 4 games, scoring rate minus the league rate from each drive's starting state. Raw scoring rate would mix in field position.
+
+Next-score and this-drive touchdown chances agree near the goal line and part with distance, as they should, since the first spans later possessions. Measured on 2024-25: at 1-10 yards .66 and .66; at 41-60 yards .37 and .28; at 81-99 yards .25 and .16.
