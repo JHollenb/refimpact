@@ -9,7 +9,7 @@ from refimpact.scenarios import ordered, play_id
 
 
 def week_card(game: dict, events: list[dict]) -> dict:
-    """Biggest flag swing and big flags by beneficiary. Swings are never added together."""
+    """Biggest flag swing, big flags by beneficiary, and each team's swings added up."""
     home, away = game["home_team"], game["away_team"]
     priced = [e for e in events if took_effect(e) and e.get("home_wp_swing_pp") is not None]
     priced.sort(key=lambda e: abs(e["home_wp_swing_pp"]), reverse=True)
@@ -30,6 +30,9 @@ def week_card(game: dict, events: list[dict]) -> dict:
         home: sum(e["home_wp_swing_pp"] > 0 for e in big),
         away: sum(e["home_wp_swing_pp"] < 0 for e in big),
     }
+    # Each flag's swing at its own moment, added up. This isn't a change in final win chance.
+    home_gained = sum(e["home_wp_swing_pp"] for e in priced if e["home_wp_swing_pp"] > 0)
+    away_gained = -sum(e["home_wp_swing_pp"] for e in priced if e["home_wp_swing_pp"] < 0)
     return {
         "game_id": game["game_id"],
         "gameday": game["gameday"],
@@ -45,6 +48,10 @@ def week_card(game: dict, events: list[dict]) -> dict:
         "unpriced": game.get("unpriced_penalties"),
         "biggest": biggest,
         "big_calls": {"total": len(big), "by_team": helped},
+        "swing_totals": {
+            home: {"gained": home_gained, "lost": away_gained},
+            away: {"gained": away_gained, "lost": home_gained},
+        },
         "net_home_epa": game.get("net_home_epa"),
     }
 

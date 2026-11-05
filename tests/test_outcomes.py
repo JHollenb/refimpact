@@ -471,12 +471,14 @@ def event(swing, disposition="accepted"):
     }
 
 
-def test_week_card_leads_with_the_biggest_swing_and_never_adds_swings():
+def test_week_card_gives_the_biggest_swing_and_each_teams_added_swings():
     events = [event(14.6), event(-8.4), event(10.1), event(1.0), event(30.0, "declined")]
     card = week_card(game_record(), events)
     assert card["biggest"]["team"] == "SEA" and card["biggest"]["pp"] == 14.6
     assert card["big_calls"] == {"total": 3, "by_team": {"SEA": 2, "CHI": 1}}
-    assert "sum" not in json.dumps(card)
+    totals = card["swing_totals"]
+    assert totals["SEA"]["gained"] == pytest.approx(25.7) and totals["SEA"]["lost"] == 8.4
+    assert totals["CHI"] == {"gained": totals["SEA"]["lost"], "lost": totals["SEA"]["gained"]}
 
 
 def test_week_card_credits_the_away_team_when_the_swing_is_negative():

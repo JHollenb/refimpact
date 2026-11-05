@@ -173,6 +173,13 @@ main { padding-block: var(--sp-5) var(--sp-6); min-height: 70vh; }
 .scorehead .impact { justify-items: start; text-align: left; margin-top: var(--sp-4); display: flex; gap: var(--sp-2) var(--sp-3); align-items: baseline; flex-wrap: wrap; }
 .scorehead .impact__value { font-size: var(--fs-md); }
 .scorehead__net { margin-top: var(--sp-1); color: var(--ink-3); font-size: var(--fs-sm); }
+.totals { margin-top: var(--sp-4); border-collapse: collapse; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.totals caption { text-align: left; color: var(--ink-3); font-size: var(--fs-xs); padding-bottom: var(--sp-1); }
+.totals th, .totals td { padding: var(--sp-1) var(--sp-4) var(--sp-1) 0; text-align: right; font-weight: 400; border-top: 1px solid var(--line); }
+.totals thead th { color: var(--ink-3); font-size: var(--fs-xs); border-top: 0; }
+.totals th:first-child { text-align: left; font-weight: 600; }
+.totals thead th:first-child { font-weight: 400; }
+.totals td:last-child { font-weight: 600; padding-right: 0; }
 
 /* ---------- 7. Section headings + segmented controls ---------- */
 .section-head { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-3); }

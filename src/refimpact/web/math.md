@@ -353,9 +353,8 @@ The penalty ledger spans both possessions. The game's `net_home_epa` is its fina
 known-effects penalty sum, split into home-on-offense and home-on-defense subtotals. It is shown
 as the **expected margin shift, ignores score**: EP has no score input, so a flag in a blowout
 counts in full. In 2024 and 2026, three-score flags were 10.5% of absolute ledger EPA and 1.4%
-of absolute WP. The game view therefore leads with each flag's win-chance swing at the moment,
-the largest swing and the count of swings of 5 pp or more, with the unpriced count beside them.
-Swings are never added together.
+of absolute WP. The game view therefore reads flags in win-chance swings at the moment instead,
+with the unpriced count beside them. Their added total is defined and tested in section 12.
 
 If no estimate is known the ledger is unknown. A declined or picked-up flag's exact zero is not
 a measurement: it adds nothing to the sum and is not counted as priced. Coverage is priced flags
@@ -485,7 +484,20 @@ Each game shows, for each team, the sum of native EPA on its last 5 scrimmage sn
 
 ## 12. The week headline
 
-Each game's card leads with its **biggest call**: `max |I^WP|` over priced flags that took effect, signed to the team it helped, with the moment. Beside it is the count of **big calls**, priced flags of at least 5 pp, split by the team each helped. Counts add; swings never do. A single at-the-moment swing cannot say who would have won, and neither can the count.
+Each game's card leads with **each team's flag swings added up**, over priced flags that took effect. A team's **gained** is the sum of swings that helped it, its **lost** is the sum that hurt it, and its **net** is the difference. One team's gain is the other's loss. Totals are in whole points, and net is the difference of those. The card also gives the **biggest call**, `max |I^WP|`, signed to the team it helped, with the moment.
+
+**A total is not a final win chance.** Each swing is priced at the state that really happened, and removing one flag would change what the next was worth. We tested how much that matters on all 121 games of 2026: take earlier flags' expected points off the scoreboard, hold everything else as played, and price each flag again. Rescoring without the shift matched stored swings within .5 pp on 99.1% of the 1,722 flags tested.
+
+| Measured, 2026 | Result |
+|---|---|
+| Added total against re-priced total, median gap | 3.1 pp |
+| 90th percentile gap, largest gap | 16 pp, 77 pp |
+| Games with a gap of 5 pp or more | 38% |
+| Games where the two favor different teams | 12% |
+| Correlation between them | .80 |
+| CHI at SEA, added and re-priced, for SEA | +33.6, +17.6 |
+
+The re-priced figure is a sensitivity test, not the true answer, since later plays are held as played. Other limits: 13% of the absolute total comes from flags under 2 pp, which are within model noise; added to the opening win chance, a net leaves 0 to 100% in 4 of 121 games; the net's correlation with final margin is .01, though margin already includes the flags and can't settle what they did. A correct flag counts as a gain for the other team, and a no-call never appears. Who would have won without the flags is not yet known; the next test is a full-game simulation.
 
 The game page also gives the net of all priced flags in expected points, labeled as ignoring score. It isn't the headline because, measured in the 2026-11-03 audit, three-score flags are 10.5% of its absolute total and 1.4% of absolute win-chance swing. Flags without a price are counted beside these figures, never as zero.
 

@@ -18,7 +18,7 @@ comparisons and full precision estimates are retained separately from tweets.
 
 ## Local dashboard and API
 
-The dashboard is a week of games, each with its biggest call and its big calls by team. Open a game
+The dashboard is a week of games, each with its flag swings added up by team and its biggest call. Open a game
 for a win-chance chart with a dot on each flag, then its drives, each with win chance in both models
 at the end. Open a drive for its plays. Any play can take a different result, which shows win chance
 against what was recorded, the chance of a first down and several measures of the chance of scoring.
@@ -248,11 +248,17 @@ compute one, but only this computer can save or delete, because the LAN server h
 
 ## Reading the week and game pages
 
-Each week's card leads with **the game's biggest call**: one flag's effect on win chance when it
-happened, against keeping the described play, in whole points, signed to the team it helped. **Big
-calls** counts flags of 5+ pp by the team each helped. Swings under 2 pp are within model noise,
-unpriced flags are counted beside these figures, and swings are never added together. Inside 2:00
-a swing also carries a clock range; see `/api/v1/math`.
+Each week's card leads with **each team's flag swings added up**. A swing is one flag's effect on
+win chance when it happened, against keeping the described play. The card gives the net and each
+team's gain, and the game page gives gained, lost and net by team. The card also gives the game's
+biggest call. CHI at SEA in Week 8 reads SEA +33 pp: 47 gained, 14 lost.
+
+A total is not what the final win chance would have been, because each swing is priced at the state
+that really happened. Re-pricing each flag without the earlier ones moves 2026 totals by a median
+3 pp and up to 77 pp; CHI at SEA drops to about +18 for SEA. A correct flag counts as a gain for the
+other team, and no-calls are missing. Swings under 2 pp are within model noise, unpriced flags are
+counted beside these figures, and inside 2:00 a swing also carries a clock range. See section 12 of
+`/api/v1/math`.
 
 The game page also gives **flags net, ignoring score**, a known-effects comparison ledger across both
 possessions. EP has no score input, so a blowout flag counts in full. It measures what penalties were

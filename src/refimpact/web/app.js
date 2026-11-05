@@ -96,15 +96,35 @@
     }
   }
 
-  function impactHtml(card) {
+  // Whole points for each team, leader first. Net is the difference of these, so the page adds up.
+  function swingRows(card) {
+    return [card.away_team, card.home_team].map((team) => {
+      const t = card.swing_totals[team];
+      return { team, gained: Math.round(t.gained), lost: Math.round(t.lost) };
+    }).sort((x, y) => (y.gained - y.lost) - (x.gained - x.lost));
+  }
+
+  function swingTable(card) {
+    if (!card || !card.biggest) return "";
+    const signed = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : "0");
+    const rows = [card.away_team, card.home_team].map((team) => swingRows(card).find((r) => r.team === team));
+    return `<table class="totals"><caption>Win chance from flags, pp</caption>
+      <thead><tr><th scope="col">Team</th><th scope="col">Gained</th><th scope="col">Lost</th><th scope="col">Net</th></tr></thead>
+      <tbody>${rows.map((r) => `<tr><th scope="row">${esc(r.team)}</th><td>${signed(r.gained)}</td><td>${signed(-r.lost)}</td><td>${signed(r.gained - r.lost)}</td></tr>`).join("")}</tbody></table>
+      <p class="scorehead__net">Each flag's swing when it happened, added up. Not what the final win chance would have been.</p>`;
+  }
+
+  function impactHtml(card, detail = false) {
     if (!card) return "";
     if (card.status !== "final" && !card.pbp_available) return `<div class="impact"><span class="impact__none">${card.status === "scheduled" ? "Upcoming" : "Not available yet"}</span></div>`;
     const big = card.biggest;
     if (!big) return `<div class="impact"><span class="impact__label">Ref impact</span><span class="impact__none">${card.flags ? "No priced flags" : "No flags"}</span></div>`;
-    const teams = Object.entries(card.big_calls.by_team).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
-    const split = card.big_calls.total ? `${card.big_calls.total} big call${card.big_calls.total === 1 ? "" : "s"} (${teams.map(([t, n]) => `${t} ${n}`).join(", ")})` : "No big calls";
-    const unpriced = card.unpriced ? ` · ${card.unpriced} not priced` : "";
-    return `<div class="impact"><span class="impact__label">Ref impact</span><span class="impact__value">${esc(big.team)} +${Math.round(big.pp)} pp</span><span class="impact__sub">biggest call, ${qlabel(big.qtr, big.time)}</span><span class="impact__sub">${esc(split)}${esc(unpriced)}</span></div>`;
+    const unpriced = card.unpriced && !detail ? `<span class="impact__sub">${card.unpriced} not priced</span>` : "";
+    const [lead, other] = swingRows(card);
+    const net = lead.gained - lead.lost;
+    const value = net === 0 ? "Even" : `${esc(lead.team)} +${net} pp`;
+    const gained = detail ? "" : `<span class="impact__sub">Gained: ${esc(lead.team)} ${lead.gained}, ${esc(other.team)} ${other.gained}</span>`;
+    return `<div class="impact"><span class="impact__label">Ref impact</span><span class="impact__value">${value}</span>${gained}<span class="impact__sub">Biggest call ${esc(big.team)} +${Math.round(big.pp)}, ${qlabel(big.qtr, big.time)}</span>${unpriced}</div>`;
   }
 
   function gameRow(g) {
@@ -154,7 +174,7 @@
     const head = `<header class="scorehead">${back}
       <p class="scorehead__meta">${esc(meta)}</p>
       <h1 class="scorehead__score" aria-label="${esc(g.away_team)} ${g.away_score ?? ""}, ${esc(g.home_team)} ${g.home_score ?? ""}">${score(g.away_team, g.away_score, awayWin)}${score(g.home_team, g.home_score, homeWin)}</h1>
-      ${impactHtml(S.view.card)}${netLine}</header>`;
+      ${impactHtml(S.view.card, true)}${swingTable(S.view.card)}${netLine}</header>`;
     if (!S.view.chart.length) { app.innerHTML = `${head}<p class="notice">Plays appear after the game, when play-by-play is published.</p>`; return; }
     app.innerHTML = `${head}
       <section class="chart" id="chart-sec" aria-labelledby="chart-h">
